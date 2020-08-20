@@ -1,0 +1,19 @@
+{
+    "name": "virx/qatoncore",
+    "authors": [
+        {
+            "name": "Antony Peiris",
+            "email": "asp@virx.net"
+        }
+    ],
+    "description": "The Elemental PHP MVC System Core",
+    "license": "MIT",
+    "require": {
+        "php": "^7.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "VirX\\":"src/Qaton"
+        }
+    }
+}

@@ -1,2 +1,2 @@
-# qatoncore
-Qaton Core
+# Qaton
+
