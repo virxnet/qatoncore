@@ -13,7 +13,7 @@
     },
     "autoload": {
         "psr-4": {
-            "VirX\\":"src/Qaton"
+            "VirX\\Qaton":"src/Qaton"
         }
     }
 }
