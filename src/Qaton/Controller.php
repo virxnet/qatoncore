@@ -3,6 +3,7 @@
 namespace VirX\Qaton;
 
 use Exception;
+use VirX\Qaton\View;
 
 /* Temporary notes about Controller routing
     - automated routing is built-in to the Controller class
@@ -40,6 +41,8 @@ class Controller
     public $request;
     public $base_dir;
     public $app_root_dir;
+    public $views_dir;
+    public $view;
     public $active_controller;
     public $active_controller_namespace = array();
     public $active_controller_class;
@@ -62,6 +65,7 @@ class Controller
         $this->request = &$this->SYSTEM->USER_HTTP_REQUEST;
         $this->base_dir = &$this->SYSTEM->CONTOLLERS_PATH;
         $this->app_root_dir = &$this->SYSTEM->BASE_PATH;
+        $this->views_dir = &$this->SYSTEM->HTTP_CONFIG['APP_VIEWS_PATH'];
         $this->default_controller = &$this->SYSTEM->HTTP_CONFIG['APP_DEFAULT_CONTROLLER'];
         $this->default_method = &$this->SYSTEM->HTTP_CONFIG['APP_DEFAULT_METHOD'];
         $this->fallback_controller = &$this->SYSTEM->HTTP_CONFIG['APP_FALLBACK_CONTROLLER'];
@@ -70,6 +74,7 @@ class Controller
         $this->active_controller = $this->_setActiveController();
         $this->active_class = $this->_setActiveControllerClass();
         $this->active_method = $this->_setActiveMethod();
+        $this->view = new View($this);
     }
     
     public function _setActiveMethod()
@@ -86,20 +91,21 @@ class Controller
         {
             if (class_exists($this->active_controller_class, true))
             {
-                return new $this->active_controller_class;
+                return new $this->active_controller_class($this); // TODO: find a secure way to pass parameters into method or call methods in class if params don't exist
             }
             throw new \Exception('Error Instantiating Active Controller Class : ' . $this->active_controller_class);
         }
         catch (Exception $e)
         {
-            //debug_print_backtrace();
+            echo "<pre>";
+            debug_print_backtrace();
             trigger_error($e->getMessage(), E_USER_WARNING);
             $this->_activateHttpFallbackController();
             try 
             {
                 if (class_exists($this->active_controller_class, true))
                 {
-                    return new $this->active_controller_class;
+                    return new $this->active_controller_class($this);
                 }
                 throw new \Exception('Error Instantiating Fallback Controller Class : ' . $this->active_controller_class);
             }
@@ -250,4 +256,6 @@ class Controller
             throw new \Exception('Autoloading Controller Class Failed : ' . $class . ' from file ' . $controller);
         });
     }
+
+    
 }
