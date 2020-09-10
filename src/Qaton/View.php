@@ -7,10 +7,12 @@ use Exception;
 class View
 {
     public $controller;
+    public $base_url;
     
     public function __construct(Controller &$controller)
     {
         $this->controller = &$controller;
+        $this->_setBaseUrl();
     }
     
     public function render($view_file, $data=false, $return=false)
@@ -41,6 +43,17 @@ class View
         {
             throw new \Exception('View Not Found : ' . $view_file);
         }
+    }
+
+    private function _setBaseUrl()
+    {
+        if (isset($_SERVER['HTTP_HOST']))
+        {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+            $this->base_url = $protocol.$_SERVER['HTTP_HOST'].$this->controller->SYSTEM->HTTP_CONFIG['APP_URL_SUB_DIR'];
+        }
+
+        return null;
     }
 
 }
