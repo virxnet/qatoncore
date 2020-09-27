@@ -2,6 +2,7 @@
 
 namespace VirX\Qaton;
 
+require_once('Helpers.php');
 class System 
 {
     const REQUIRED_HTTP_CONFIG_ITEMS = array(
@@ -13,6 +14,10 @@ class System
         'APP_FALLBACK_CONTROLLER',
         'APP_VIEWS_PATH',
         'APP_URL_SUB_DIR'
+    );
+
+    const OPTIONAL_HTTP_PREASSIGNED_CONFIG_ITEMS = array(
+        'APP_DEBUG' => true
     );
     
     //
@@ -28,7 +33,7 @@ class System
     public $Controller;
 
     public function __construct(String $caller_path)
-    {
+    {   
         $this->CALLER_PATH = $caller_path;
     }
 
@@ -36,12 +41,30 @@ class System
     {
         $this->HTTP_CONFIG = $config;
         $this->_checkConfigRequirements();
+        $this->_loadOptionalConfigDefaults();
+
+        if ($this->HTTP_CONFIG['APP_DEBUG'] === true)
+        {
+            __start_debug();
+        }
+
         $this->_initEnvironment();
         $this->_setUserHttpRequest();
         $this->Controller = new Controller($this);
         $this->Controller->_initHttpController();
         $this->Controller->_instantiateActiveController();
-        
+
+    }
+
+    private function _loadOptionalConfigDefaults()
+    {
+        foreach(self::OPTIONAL_HTTP_PREASSIGNED_CONFIG_ITEMS as $key => $value)
+        {
+            if (array_key_exists($key, $this->HTTP_CONFIG) === false)
+            {
+                $this->HTTP_CONFIG[$key] = $value;
+            }
+        }
     }
 
     private function _checkConfigRequirements()
@@ -113,4 +136,6 @@ class System
             }
         }
     }
+
+    
 }

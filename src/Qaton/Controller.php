@@ -5,6 +5,8 @@ namespace VirX\Qaton;
 use Exception;
 use VirX\Qaton\View;
 
+use function PHPSTORM_META\elementType;
+
 /* Temporary notes about Controller routing
     - automated routing is built-in to the Controller class
     - all 404s will maintain the complete user request array
@@ -79,19 +81,80 @@ class Controller
     
     public function _setActiveMethod()
     {
+        if (is_array($this->active_request))
+        {
+            $this->active_method = array_shift($this->active_request);
+        }
+        else
+        {
+            $this->active_method = false;
+        }
+
+        $this->active_params = $this->active_request;
+
+        return $this->active_method;
+    }
+
+    public function _instantiateController()
+    {
+        if ($this->active_method)
+        {
+
+            ob_start();
+            $obj = new $this->active_controller_class($this);
+            $method = $this->active_method;
+
+            if (method_exists($obj, $method))
+            {
+                
+                $reflection = new \ReflectionMethod($this->active_controller_class, $method);
+
+                if ($this->SYSTEM->HTTP_CONFIG['APP_DEBUG'] === true)
+                {
+                    __debug(json_decode(json_encode($reflection->getParameters(), JSON_OBJECT_AS_ARRAY)), 'ACTIVE_METHOD_PARAMETERS');
+                    __debug(json_decode(json_encode($reflection->getNumberOfRequiredParameters(), JSON_OBJECT_AS_ARRAY)), 'ACTIVE_METHOD_PARAMETER_COUNT');
+                }
+                
+                if ($reflection->getNumberOfRequiredParameters() == count($this->active_params))
+                {
+                    if (empty($this->active_params))
+                    {
+                        return $obj->$method();
+                    }
+                    else
+                    {
+                        call_user_func_array(array($obj, $method), array_values($this->active_params));
+                    }
+                }
+                else
+                {
+                    ob_clean();
+                    $this->_activateHttpFallbackController();
+                }
+                
+            }
+            else
+            {
+                ob_clean();
+                $this->_activateHttpFallbackController();
+            }
+            
+        }
+
+        return new $this->active_controller_class($this);
         
     }
 
     public function _instantiateActiveController()
     {
-        //var_dump($this->request);
-        //exit();
+
         $this->_setActiveControllerClass();
         try 
         {
             if (class_exists($this->active_controller_class, true))
             {
-                return new $this->active_controller_class($this); // TODO: find a secure way to pass parameters into method or call methods in class if params don't exist
+                //return new $this->active_controller_class($this); // TODO: find a secure way to pass parameters into method or call methods in class if params don't exist
+                return $this->_instantiateController();
             }
             throw new \Exception('Error Instantiating Active Controller Class : ' . $this->active_controller_class);
         }
@@ -105,7 +168,8 @@ class Controller
             {
                 if (class_exists($this->active_controller_class, true))
                 {
-                    return new $this->active_controller_class($this);
+                    //return new $this->active_controller_class($this);
+                    return $this->_instantiateController();
                 }
                 throw new \Exception('Error Instantiating Fallback Controller Class : ' . $this->active_controller_class);
             }
@@ -212,6 +276,7 @@ class Controller
             $this->active_controller = $controller;
             $this->active_request = $this->request;
             HttpHeaders::setByCode(404);
+            $this->_setActiveControllerClass();
             return $this->active_controller;
         }
         else
@@ -257,5 +322,27 @@ class Controller
         });
     }
 
+    public function __destruct()
+    {
+        if ($this->SYSTEM->HTTP_CONFIG['APP_DEBUG'] === true)
+        {
+            __debug($this->SYSTEM->HTTP_CONFIG, 'CONFIG');
+            __debug($this->active_controller, 'ACTIVE_CONTROLLER');
+            __debug($this->active_controller_namespace, 'ACTIVE_CONTROLLER_NAMESPACE');
+            __debug($this->active_request, 'ACTIVE_REQUEST');
+            __debug($this->last_default_controller, 'LAST_DEFAULT_CONTROLLER');
+            __debug($this->active_class, 'ACTIVE_CLASS');
+            __debug($this->active_method, 'ACTIVE_METHOD');
+            __debug($this->active_params, 'ACTIVE_PARAMS');
+            __debug($this->default_controller, 'DEFAULT_CONTROLLER');
+            __debug($this->default_method, 'DEFAULT_METHOD');
+            __debug($this->fallback_controller, 'FALLBACK_CONTROLLER');
+            __debug($this->controllers_namespace, 'CONTROLLERS_NAMESPACE');
+            __debug($this->base_dir, 'BASE_DIR');
+            __debug($this->app_root_dir, 'APP_ROOT_DIR');
+            __debug($this->views_dir, 'VIEWS_DIR');
+            __print_debug();
+        }
+    }
     
 }
