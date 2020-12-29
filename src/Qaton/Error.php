@@ -16,6 +16,9 @@ class Error
         @set_exception_handler(array($this, 'exceptionHandler'));
 
         switch ($code) {
+            case 1000:
+                $message = "Application Configuration Error ({$message})";
+                break;
             case 1001:
                 $message = "Invalid Path {$message} ";
                 break;

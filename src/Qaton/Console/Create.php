@@ -48,7 +48,7 @@ class Create extends Console
         foreach ($args as $arg) {
             $migration = strtolower(time() . '_' . $arg);
 
-            Console::output("Creating Migration {$migration}...");
+            Console::output("Creating Migration {$migration}...", 2, 1);
 
             switch ($this->config['APP_DATABASE_TYPE']) {
                 case 'FileDatabase':
@@ -70,8 +70,7 @@ class Create extends Console
             $this->makeFromTemplate($template_file, $migration_file, $template_data, 'migration');
         }
 
-        // TODO: fix me
-        Console::output();
+        Console::outputNotice('Migration Creation Complete', 2, 1);
     }
 
     public function model(array $args)
@@ -100,7 +99,7 @@ class Create extends Console
             $model_file = $this->config['APP_PATHS']['MODELS']
                             . $model_path . $model_class . parent::PHP_EXT;
 
-            Console::output("Creating Model {$model_file}...");
+            Console::output("Creating Model {$model_file}...", 2, 1);
 
             if ($table === false) {
                 $table = $model . 's'; // TODO: implement proper pluralization
@@ -120,7 +119,7 @@ class Create extends Console
             $this->makeFromTemplate($template_file, $model_file, $template_data, 'model');
         }
 
-        Console::output();
+        Console::outputNotice('Model Creation Complete', 2, 1);
     }
 
     public function page(array $args)
@@ -138,11 +137,13 @@ class Create extends Console
                 $this->setupPublicResources($page, $page_template);
             }
         }
+
+        Console::outputNotice('Page Creation Complete', 2, 1);
     }
 
     private function setupPublicResources($page, $page_template)
     {
-        $this->cloneDir($page_template . DIRECTORY_SEPARATOR . 'public', $this->config['APP_PUBLIC_PATH']
+        $this->cloneDir($page_template . 'public', $this->config['APP_PUBLIC_PATH']
                         . $this->config['APP_PUBLIC_ASSETS_PATH']);
     }
 
@@ -153,7 +154,7 @@ class Create extends Console
         foreach ($args as $view) {
             $view_file = $this->config['APP_PATHS']['VIEWS'] . $view . parent::PHP_EXT;
 
-            Console::output("Creating View {$view_file}...");
+            Console::output("Creating View {$view_file}...", 2, 1);
 
             $template_data = array(
                 'ViewName' => $view
@@ -163,6 +164,8 @@ class Create extends Console
 
             $this->makeFromTemplate($template_file, $view_file, $template_data, 'view');
         }
+
+        Console::outputNotice('View Creation Complete', 2, 1);
     }
 
     public function controller(array $args)
@@ -182,7 +185,7 @@ class Create extends Console
             $controller_file = $this->config['APP_PATHS']['CONTROLLERS']
                                 . $controller_path . $controller_class . parent::PHP_EXT;
 
-            Console::output("Creating Controller {$controller_file}...");
+            Console::output("Creating Controller {$controller_file}...", 2, 1);
 
             $methods = $this->buildMethods($controller_class);
 
@@ -215,7 +218,7 @@ class Create extends Console
             $this->makeFromTemplate($template_file, $controller_file, $template_data, 'controller');
         }
 
-        Console::output();
+        Console::outputNotice('Controller Creation Complete', 2, 1);
     }
 
     private function checkCommonRequirements($args, $resource, $write_test = true)
@@ -438,7 +441,7 @@ class Create extends Console
 
     public function cloneDir($source, $dest)
     {
-        Console::output("Cloning {$source} to {$dest}");
+        Console::output("Cloning {$source} to {$dest}", 2, 1);
 
         if (!realpath($dest)) {
             Console::outputNotice($dest . ' Does Not Exist ');

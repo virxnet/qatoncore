@@ -5,7 +5,7 @@ namespace VirX\Qaton;
 use VirX\Qaton\Error;
 use VirX\Qaton\Http;
 use VirX\Qaton\Request;
-use VirX\Qaton\COnsole;
+use VirX\Qaton\Console;
 
 final class System
 {
