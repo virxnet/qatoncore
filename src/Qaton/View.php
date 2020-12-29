@@ -2,72 +2,150 @@
 
 namespace VirX\Qaton;
 
-use Exception;
+use VirX\Qaton\Error;
 
 class View
 {
-    public $controller;
+    public const PHP_EXT = '.php';
+
     public $base_url;
-    
-    public function __construct(Controller &$controller)
+    public $page_path;
+    public $page_name;
+    public $views_path;
+    public $view;
+    public $data = [];
+    public $section;
+
+    public function __construct()
     {
-        $this->controller = &$controller;
-        $this->_setBaseUrl();
+        //
     }
-    
-    public function render($view_file, $data=false, $return=false)
+
+    public function section(string $section = null, string $layout = null, array $data = [])
     {
-        
-        // TODO: Majob fix: This is ugly, these paths need to be fixed from the source 
-        $view_file = $this->controller->SYSTEM->BASE_PATH.DIRECTORY_SEPARATOR.$this->controller->SYSTEM->APP_NAME.DIRECTORY_SEPARATOR.$this->controller->views_dir.$view_file.$this->controller::PHP_EXT;
+        $this->setData($data);
+        $this->setSection($section);
+        $this->render($layout, $this->data);
+    }
 
-        if ($this->controller->SYSTEM->HTTP_CONFIG['APP_DEBUG'] === true)
-        {
-            __debug($data, "VIEW {$view_file} DATA");
-        }
-
-        if ($file = realpath($view_file))
-        {
-           if (is_array($data))
-           {
-                extract($data);
-           }
-           
-            if ($return === true)
-           {
-                ob_start();
-                include($view_file);
-                return ob_get_clean();
-           }
-           else
-           {
-                include($view_file);
-           }
-            
-        }
-        else
-        {
-            throw new \Exception('View Not Found : ' . $view_file);
+    public function yeild(string $sub_section_view = null)
+    {
+        if (is_string($this->section)) {
+            if (realpath($this->views_path . DIRECTORY_SEPARATOR . $this->section . DIRECTORY_SEPARATOR . $sub_section_view . self::PHP_EXT)) {
+                $this->render($this->section . DIRECTORY_SEPARATOR . $sub_section_view, $this->data);
+            }
         }
     }
 
-    private function _setBaseUrl()
+    public function render(string $view = null, array $data = [])
     {
-        if (isset($_SERVER['HTTP_HOST']))
-        {
-            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-            $this->base_url = $protocol.$_SERVER['HTTP_HOST'].$this->controller->SYSTEM->HTTP_CONFIG['APP_URL_SUB_DIR'];
-        }
+        $this->setView($view);
+        $this->setData($data);
+        __debug(['view' => $this, 'data' => $this->data], 'VIEW @' .  __METHOD__ . " >> {$this->view}", 2); // Level 2 only
 
-        return null;
+        if (is_array($this->data)) {
+            extract($this->data);
+        }
+        include($this->view);
     }
 
-    public function __destruct()
+    public function fetch(string $view = null, array $data = [])
     {
-        if ($this->controller->SYSTEM->HTTP_CONFIG['APP_DEBUG'] === true)
-        {
-            __debug($this->base_url, 'BASE_URL');
+        $this->setView($view);
+        $this->setData($data);
+        __debug(['view' => $this, 'data' => $this->data], 'VIEW @' .  __METHOD__ . " >> {$this->view}", 2); // Level 2 only
+
+        if (is_array($this->data)) {
+            extract($this->data);
+        }
+        ob_start();
+        include($this->view);
+        return ob_get_clean();
+    }
+
+    public function baseUrl()
+    {
+        echo $this->base_url;
+    }
+
+    public function pageUrl()
+    {
+        echo $this->base_url . mb_substr($this->page_path, 1);
+    }
+
+    public function pageName()
+    {
+        echo $this->page_name;
+    }
+
+    public function isActive($match, $class = 'active')
+    {
+        if ($this->page_path == $match) {
+            if ($class) {
+                echo $class;
+            } else {
+                return true;
+            }
+        } else {
+            if ($class) {
+                echo null;
+            } else {
+                return true;
+            }
         }
     }
 
+    public function setPageName(string $name = null)
+    {
+        $this->page_name = $name;
+    }
+
+    public function setPagePath(string $path = null)
+    {
+        $this->page_path = $path;
+    }
+
+    public function setView(string $view = null)
+    {
+        if (!$this->view = realpath($this->views_path . DIRECTORY_SEPARATOR . $view . self::PHP_EXT)) {
+            throw new Error('View Not Found', ['view' => $view], 1002, __LINE__, __METHOD__, __CLASS__, __FILE__);
+        }
+    }
+
+    public function setSection($section)
+    {
+        if (realpath($dir = $this->views_path . DIRECTORY_SEPARATOR . $section)) {
+            if (is_dir($dir)) {
+                $this->section = $section;
+                return;
+            }
+        }
+
+        throw new Error('View Section Not Found', ['section' => $section], 1002, __LINE__, __METHOD__, __CLASS__, __FILE__);
+    }
+
+    public function setData(array $data = [])
+    {
+        if (!is_array($this->data)) {
+            $this->data = [];
+        }
+
+        if (is_array($data) && !empty($data)) {
+            if (empty($this->data)) {
+                $this->data = $data;
+            } else {
+                $this->data = array_merge($this->data, $data);
+            }
+        }
+    }
+
+    public function setBaseUrl(string $url = null)
+    {
+        $this->base_url = $url;
+    }
+
+    public function setViewsPath(string $path = null)
+    {
+        $this->views_path = $path;
+    }
 }

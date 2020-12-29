@@ -1,0 +1,51 @@
+
+* * * System Help * * * 
+
+This module will assist managing application system
+
+Usage: 
+
+config
+
+    Print the application configuration
+
+rebuildPaths
+
+    Create all the application paths using applicaton configuration
+
+adminPanel
+
+    Manage the admin control panel
+                
+        Options:
+
+        --install
+        Install the admin dashboard to the application 
+
+        --clean
+        Will delete all admin panel resources (with the exception of 
+        the database)
+
+        --reinstall
+        Will delete all admin panel resources (with the exception of the
+        database) install them again. This is the same as running the --install
+        and --clean options together.
+
+auth 
+
+    Manage the authentication system
+
+    Options:
+
+        --install
+        Install the admin auth system to the application. This can only be
+        undone manually to avoid human error.
+
+install 
+
+    Install the application paths and directory structure
+
+clean
+
+    Delete all application data and reinstall it by running install()
+    above.

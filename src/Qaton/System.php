@@ -2,140 +2,382 @@
 
 namespace VirX\Qaton;
 
-require_once('Helpers.php');
-class System 
+use VirX\Qaton\Error;
+use VirX\Qaton\Http;
+use VirX\Qaton\Request;
+use VirX\Qaton\COnsole;
+
+final class System
 {
-    const REQUIRED_HTTP_CONFIG_ITEMS = array(
-        'APP_PATH',
-        'APP_PATH_RELATIVE_TO_CALLER',
-        'APP_CONTROLLERS_PATH',
-        'APP_DEFAULT_CONTROLLER',
-        'APP_DEFAULT_METHOD',
-        'APP_FALLBACK_CONTROLLER',
-        'APP_VIEWS_PATH',
-        'APP_URL_SUB_DIR'
-    );
 
-    const OPTIONAL_HTTP_PREASSIGNED_CONFIG_ITEMS = array(
-        'APP_DEBUG' => true
-    );
-    
-    //
-    public $APP_NAME;
-    public $BASE_PATH;
-    public $CALLER_PATH;
-    public $USER_HTTP_REQUEST;
-    public $HTTP_CONFIG;
-    public $CONTOLLERS_PATH;
-    public $CONTROLLERS_NAMESPACE;
+    /**
+     * Framework Package Name
+     *
+     * @var string
+     */
+    public const PACKAGE = 'VirX Qaton';
 
-    //
-    public $Controller;
+    /**
+     * Framework Package Description
+     *
+     * @var string
+     */
+    public const DESCRIPTION = 'The Elemental PHP MVC Framework';
 
-    public function __construct(String $caller_path)
-    {   
-        $this->CALLER_PATH = $caller_path;
+    /**
+     * Framework Package Version
+     *
+     * @var string
+     */
+    public const VERSION = '1.0.0';
+
+    /**
+     * Framework Package Release Date
+     *
+     * @var string
+     */
+    public const RELEASE_DATE = '2021-01-01';
+
+    /**
+     * Framework Package Author
+     *
+     * @var string
+     */
+    public const AUTHOR = 'Antony Shan Peiris <asp@virx.net>';
+
+    /**
+     * Framework Package Website
+     *
+     * @var string
+     */
+    public const WEBSITE = 'http://qaton.virx.net';
+
+    /**
+     * Environment Config Key
+     *
+     * @var string
+     */
+    private const ENV_CONFIG_KEY = 'QATON_CONFIG';
+
+    public const PHP_EXT = '.php';
+
+    /**
+     * Config Defaults
+     *
+     * @var array
+     */
+    public const CONFIG_SYSTEM_DEFAULTS = [
+        'APP_PATH'                          => null,
+        'BASE_PATH'                         => null,
+        'APP_PATH_RELATIVE_TO_BASE'         => true,
+        'APP_PATHS'                         => [
+            'CONTROLLERS'                       => 'Controllers' . DIRECTORY_SEPARATOR,
+            'VIEWS'                             => 'Views' . DIRECTORY_SEPARATOR,
+            'DATABASE'                          => 'Database' . DIRECTORY_SEPARATOR,
+            'FILEDATABASE'                      => 'Database'  . DIRECTORY_SEPARATOR .  'FileDatabase'
+                                                    . DIRECTORY_SEPARATOR .  'Databases' . DIRECTORY_SEPARATOR,
+            'FILEDATABASE_MIGRATIONS'           => 'Database'  . DIRECTORY_SEPARATOR .  'FileDatabase'
+                                                    . DIRECTORY_SEPARATOR .  'Migrations' . DIRECTORY_SEPARATOR,
+            'TEMPLATES'                         => 'Templates' . DIRECTORY_SEPARATOR,
+            'BLUEPRINTS'                        => 'Blueprints' . DIRECTORY_SEPARATOR,
+            'CONFIG'                            => 'Config' . DIRECTORY_SEPARATOR,
+            'MODELS'                            => 'Models' . DIRECTORY_SEPARATOR,
+            'HELPERS'                           => 'Helpers' . DIRECTORY_SEPARATOR,
+            'STORAGE'                           => 'Storage' . DIRECTORY_SEPARATOR,
+            'CACHE'                             => 'Storage'  . DIRECTORY_SEPARATOR .  'Cache' . DIRECTORY_SEPARATOR,
+        ],
+        'APP_VIEWS_SPECIAL_PATHS'            => [
+            'COMMON'                      => 'common' . DIRECTORY_SEPARATOR,
+            'LAYOUTS'                     => 'layouts' . DIRECTORY_SEPARATOR,
+            'SECTIONS'                    => 'sections' . DIRECTORY_SEPARATOR,
+        ],
+        'APP_PUBLIC_PATH'                   => 'public' . DIRECTORY_SEPARATOR,
+        'APP_PUBLIC_ASSETS_PATH'            => 'assets' . DIRECTORY_SEPARATOR,
+        'APP_DATABASE_TYPE'                 => 'FileDatabase',
+        'APP_DATABASE'                      => [
+            'NAME'                              => 'default_database',
+            'MIGRATIONS'                        => 'filedatabase_migrations'
+        ],
+        'APP_DATABASE_OPTIONS'              => [],
+        'APP_AUTO_USE_DATABASE'             => true,
+        'APP_AUTH_TABLE'                    => 'users',
+        'APP_AUTH'                          => [
+            'USERS_TABLE'                       => 'users',
+            'ACTIVE_USERS_TABLE'                => 'active_user_sessions',
+            'INITIAL_USER_DEFAULTS' => [
+                'LEVEL'                             => 1,
+                'USERNAME'                          => 'admin',
+                'EMAIL'                             => 'admin@example.com',
+                'PASSWORD'                          => 'password',
+                'FIRSTNAME'                         => 'Admin',
+                'LASTNAME'                          => 'Prime'
+            ],
+            'SESSION_NAME'                      => 'QatonActiveUser',
+            'COOKIE_NAME'                       => 'QatonUserAuthenticationSession',
+            'COOKIE_EXPIRY'                     => 3600 * 48
+        ],
+        'APP_DASHBOARD_NAME'                => 'admin',
+        'APP_DEFAULT_CONTROLLER'            => 'index',
+        'APP_DEFAULT_MIGRATION_CLASS'       => 'AppMigration',
+        'APP_DEFAULT_METHOD'                => 'index',
+        'APP_FALLBACK_CONTROLLER'           => 'Errors/Error404',
+        'APP_URL_SUB_DIR'                   => '/',
+        'APP_SERVER_USER'                   => 'www-data',
+        'APP_SERVER_GROUP'                  => 'www-data',
+        'APP_DEV_CHMOD'                     => '777',
+        'APP_DEBUG'                         => true,
+        'APP_PRODUCTION_MODE'               => false,
+        'APP_OUTPUT_MODE'                   => null,
+    ];
+
+    /**
+     * System Helpers
+     *
+     * @var array
+     */
+    private const SYSTEM_HELPERS = [
+        'env',
+        'debug',
+        'number',
+        'common'
+    ];
+
+    public $appPath;
+    public $basePath;
+    public $httpProtocol;
+    public $baseUrl;
+    public $outputMode;
+    public $config;
+    public $configOverrides;
+
+    public $request;
+    public $router;
+
+    private $start_time;
+    private $start_memory;
+    private $end_memory;
+    private $end_time;
+
+    public function __construct()
+    {
+        $this->start_time = microtime(true);
+        $this->start_memory = memory_get_usage();
+        $this->loadHelpers();
     }
 
-    public function getHttpResource(Array $config)
+    public function boot()
     {
-        $this->HTTP_CONFIG = $config;
-        $this->_checkConfigRequirements();
-        $this->_loadOptionalConfigDefaults();
+        $this->initConfig();
+        __clear_debug(1); // TODO: clean this up
+        __clear_debug(2);
+        __clear_debug(3);
+        $this->setOutputMode();
 
-        if ($this->HTTP_CONFIG['APP_DEBUG'] === true)
-        {
-            __start_debug();
+        if ($this->outputMode === 'cli') {
+            $this->getCliResource();
+        } else {
+            $this->getHttpResource();
         }
-
-        $this->_initEnvironment();
-        $this->_setUserHttpRequest();
-        $this->Controller = new Controller($this);
-        $this->Controller->_initHttpController();
-        $this->Controller->_instantiateActiveController();
-
     }
 
-    private function _loadOptionalConfigDefaults()
+    public function setConfigOverrides(array $config)
     {
-        foreach(self::OPTIONAL_HTTP_PREASSIGNED_CONFIG_ITEMS as $key => $value)
-        {
-            if (array_key_exists($key, $this->HTTP_CONFIG) === false)
-            {
-                $this->HTTP_CONFIG[$key] = $value;
+        $this->configOverrides = $config;
+    }
+
+    public function getHttpResource()
+    {
+        //
+        $this->setBaseUrl();
+        $this->request = new Request($this->config['APP_URL_SUB_DIR']);
+        $this->router = new Router($this->request, $this->config);
+        $this->attachControllerMagicProperties();
+        $this->response = new Response($this->router);
+        $this->response->send($this->outputMode);
+
+        $this->end_memory = memory_get_usage();
+    }
+
+    public function attachControllerMagicProperties()
+    {
+        $this->router->controller['instance']->request = $this->request;
+ 
+        $this->router->controller['instance']->view = new View();
+        $this->router->controller['instance']->view->setBaseUrl($this->baseUrl);
+        $this->router->controller['instance']->view->setPagePath($this->request->path);
+        $this->router->controller['instance']->view->setPageName($this->router->class);
+        $this->router->controller['instance']->view->setViewsPath($this->config['APP_PATHS']['VIEWS']);
+
+        if ($this->config['APP_AUTO_USE_DATABASE'] === true) {
+            $this->router->controller['instance']->db = Db::init($this->config);
+        }
+    }
+
+    public function initConfig()
+    {
+        $_ENV[self::ENV_CONFIG_KEY] = self::CONFIG_SYSTEM_DEFAULTS;
+        $this->config = $_ENV[self::ENV_CONFIG_KEY];
+        $this->setConfig('APP_PATH', $this->appPath);
+        $this->setConfig('BASE_PATH', $this->basePath);
+        $this->setConfig('BASE_NAMESPACE_CONTROLLERS', $this->getBaseNamespaceControllers());
+        $this->setConfig('BASE_NAMESPACE_MODELS', $this->getBaseNamespaceModels());
+
+        if (!empty($this->configOverrides)) {
+            foreach ($this->configOverrides as $key => $value) {
+                $this->setConfig($key, $value);
             }
         }
+
+        $this->setConfig('APP_PUBLIC_PATH', $this->setBasePublicPath());
+
+        $this->parseConfigAppPaths();
+        $this->initAppConfigs();
     }
 
-    private function _checkConfigRequirements()
+    public function initAppConfigs()
     {
-        foreach (self::REQUIRED_HTTP_CONFIG_ITEMS as $config_key)
-        {
-            if (!isset($this->HTTP_CONFIG[$config_key]))
-            {
-                throw new \Exception("Config Setting {$config_key} Undefined");
-            }
-        }
+        //
     }
 
-    private function _initEnvironment()
+    public function parseConfigAppPaths()
     {
-
-        if ($this->HTTP_CONFIG['APP_PATH_RELATIVE_TO_CALLER'] == 'true')
-        {
-            if (!$this->HTTP_CONFIG['APP_PATH'] = realpath($this->CALLER_PATH . '/' . $this->HTTP_CONFIG['APP_PATH'].DIRECTORY_SEPARATOR))
-            {
-                throw new \Exception('APP_PATH Invalid: ');
+        if (!empty($this->config['APP_PATHS'])) {
+            if ($this->config['APP_PATH_RELATIVE_TO_BASE'] === true) {
+                foreach ($this->config['APP_PATHS'] as $key => $path) {
+                    $this->config['APP_PATHS'][$key] = $this->appPath . $path;
+                }
             }
         }
-        elseif (!realpath($this->HTTP_CONFIG['APP_PATH']))
-        {
-            throw new \Exception('APP_PATH Invalid');
+        if (!empty($this->config['APP_VIEWS_SPECIAL_PATHS'])) {
+            if ($this->config['APP_PATH_RELATIVE_TO_BASE'] === true) {
+                foreach ($this->config['APP_VIEWS_SPECIAL_PATHS'] as $key => $path) {
+                    $this->config['APP_PATHS']['VIEWS_' . $key] = $this->config['APP_PATHS']['VIEWS'] . $path;
+                }
+            }
         }
-        
-        $app_pathinfo = pathinfo($this->HTTP_CONFIG['APP_PATH']);
-        $this->APP_NAME = $app_pathinfo['basename'];
-        $this->BASE_PATH = $app_pathinfo['dirname'];
-
-        if (!$this->CONTOLLERS_PATH = realpath($this->HTTP_CONFIG['APP_PATH'].DIRECTORY_SEPARATOR.$this->HTTP_CONFIG['APP_CONTROLLERS_PATH'].DIRECTORY_SEPARATOR))
-        {
-            throw new \Exception('APP_CONTROLLERS_PATH Invalid');
-        }
-
-        $this->CONTROLLERS_NAMESPACE = $this->APP_NAME . '\\' . str_replace(DIRECTORY_SEPARATOR, '\\', $this->HTTP_CONFIG['APP_CONTROLLERS_PATH']);
-
+        $_ENV[self::ENV_CONFIG_KEY] = $this->config;
     }
 
-    private function _setUserHttpRequest()
+    public function setConfig($key, $value)
     {
-        if (mb_substr(Http::server('REQUEST_URI'), 0, mb_strlen($this->HTTP_CONFIG['APP_URL_SUB_DIR'])) === $this->HTTP_CONFIG['APP_URL_SUB_DIR'])
-        {
-            $request_url = '/'.mb_substr(Http::server('REQUEST_URI'), mb_strlen($this->HTTP_CONFIG['APP_URL_SUB_DIR']));
+        if (is_array($value)) {
+            foreach ($value as $sub_key => $sub_value) {
+                $_ENV[self::ENV_CONFIG_KEY][$key][$sub_key] = $sub_value;
+            }
+        } else {
+            $_ENV[self::ENV_CONFIG_KEY][$key] = $value;
         }
-        else
-        {
-            $request_url = Http::server('REQUEST_URI');
-        }
-        
-        $this->USER_HTTP_REQUEST = explode('/', explode('?', $request_url, 2)[0]);
 
-        foreach ($this->USER_HTTP_REQUEST as $i => $req)
-        {
-            if ($req == '' || is_null($req))
-            {
-                unset($this->USER_HTTP_REQUEST[$i]);
+        $this->config = $_ENV[self::ENV_CONFIG_KEY];
+    }
+
+    public function getCliResource()
+    {
+        new Console($this);
+    }
+
+    public function setOutputMode()
+    {
+        if (php_sapi_name() === 'cli') {
+            $this->outputMode = 'cli';
+        } else {
+            switch ((Http::getHeaders())['Accept']) {
+                case 'application/json':
+                    $this->outputMode = 'json';
+                    break;
+                case 'text/plain':
+                    $this->outputMode = 'text';
+                    break;
+                default:
+                    $this->outputMode = 'html';
             }
         }
-        
-        $this->USER_HTTP_REQUEST = array_values($this->USER_HTTP_REQUEST); 
-        if (isset($this->USER_HTTP_REQUEST[0]))
-        {
-            if ($this->USER_HTTP_REQUEST[0] == basename(__FILE__))
-            {
-                unset($this->USER_HTTP_REQUEST[0]);
-            }
+
+        $this->setConfig('APP_OUTPUT_MODE', $this->outputMode);
+    }
+
+    public function getBaseNamespaceControllers()
+    {
+        return basename($this->config['APP_PATH']) . "\\"
+                . basename($this->config['APP_PATHS']['CONTROLLERS']);
+    }
+
+    public function getBaseNamespaceModels()
+    {
+        return basename($this->config['APP_PATH']) . "\\"
+                . basename($this->config['APP_PATHS']['MODELS']);
+    }
+
+    public function setBaseUrl()
+    {
+        $this->httpProtocol = (!empty(Http::server('HTTPS')) && Http::server('HTTPS') !== 'off'
+                        || Http::server('SERVER_PORT') == 443) ? "https://" : "http://";
+        $this->baseUrl = $this->httpProtocol
+                        . Http::server('HTTP_HOST')
+                        . $this->config['APP_URL_SUB_DIR'];
+        $this->setConfig('BASE_URL', $this->baseUrl);
+    }
+
+    public function setAppPath($path)
+    {
+        if (!$this->appPath = realpath($path)) {
+            throw new Error(null, ['path' => $path], 1001, __LINE__, __METHOD__, __CLASS__, __FILE__);
+        }
+        $this->appPath .= DIRECTORY_SEPARATOR;
+    }
+
+    public function setBasePath($path)
+    {
+        if (!$this->basePath = realpath($path)) {
+            throw new Error(null, ['path' => $path], 1001, __LINE__, __METHOD__, __CLASS__, __FILE__);
+        }
+        $this->basePath .= DIRECTORY_SEPARATOR;
+    }
+
+    public function setBasePublicPath()
+    {
+        if ($public = realpath($this->basePath . DIRECTORY_SEPARATOR . $this->config['APP_PUBLIC_PATH'])) {
+            return $public . DIRECTORY_SEPARATOR;
+        } else {
+            return $this->config['APP_PUBLIC_PATH'];
         }
     }
 
-    
+    public function loadHelpers()
+    {
+        foreach (self::SYSTEM_HELPERS as $helper) {
+            include_once(__DIR__ . DIRECTORY_SEPARATOR . 'Helpers' . DIRECTORY_SEPARATOR . $helper . self::PHP_EXT);
+        }
+    }
+
+
+    public function __destruct()
+    {
+        $this->end_time = microtime(true);
+        $banner =   ' ! ! ! ! ! '
+                    . self::PACKAGE . ' v' . self::VERSION
+                    . ' by ' . self::AUTHOR
+                    . ' ' . self::WEBSITE
+                    . ' ! ! ! ! ! ';
+        __debug($banner, 'QATON', 1);
+        __debug($this, 'SYSTEM @' .  __METHOD__, 1);
+        __debug(($this->end_time - $this->start_time), 'EXECUTION TIME', 1);
+        __debug(_formatBytes(($this->end_memory - $this->start_memory)), 'MEMORY USAGE', 1);
+        __debug(
+            [
+                'start' => $this->start_memory,
+                'end' => $this->end_memory,
+                'usage' => ($this->end_memory - $this->start_memory)
+            ],
+            'MEMORY USAGE DETAIL',
+            1
+        );
+        __debug(debug_backtrace(), 'BACKTRACE', 2);
+        __debug(@$_SESSION, 'SESSION', 2);
+        __debug($_SERVER, 'SERVER', 2);
+        __debug($_ENV, 'ENV', 2);
+        __debug($banner, 'QATON', 2);
+        __print_debug(1);
+        __print_debug(2);
+    }
 }

@@ -1,0 +1,80 @@
+
+* * * Create Help * * * 
+
+This module will assist creating Qaton resources such as Controllers, Views,
+Models, Pages, Database Migrations, CRUD Dashboards and more.
+
+Usage: 
+
+migration [migration_name(string)] ...
+
+        Create New Migration
+
+        Options:
+
+        --template=[template_path/template(string)]
+        Path to a migration template
+
+        --table
+        Name of the table to be applied to new migration. This will only work if
+        only one model is being created at a time. If multiple models are being
+        created, a table name will be generated automatically for each table
+        (which may result in an undesired table name). The automated table name
+        generation is meant for demonstration only and not intended to actually
+        figure out what you need. 
+
+model [model_path/model_name(string)] ...
+
+        Create New Migration
+
+        Options:
+
+        --template=[template_path/template(string)]
+        Path to a migration template
+
+        --migration
+        Also create a migration file for each model 
+
+        --table
+        Name of the table to be applied to new model. This will only work if
+        only one model is being created at a time. If multiple migrations are
+        being created, a table name will be generated automatically for each
+        table (which may result in an undesired table name). The automated table
+        name generation is meant for demonstration only and not intended to
+        actually figure out what you need. If you use the migration flag, the
+        same name will be generated for the migration as well.
+
+controller [controller_path/controller_name(string)] ...
+                
+        Create New Controller
+
+        Options: 
+
+        --view 
+        Generates a view along with the controller. If the --clean option is NOT
+        used together with this, then Qaton will also add a render reference in
+        the Controller constructor.
+
+        --template:[layout_name=template_path/template_name(string)] 
+        Looks in the App/Templates/ directory for the controller template to
+        use. This option overrides and ignores the --clean option if executed
+        together.
+
+view [view_path/view_name(string)] ...
+                
+        Create New View
+
+        Options: 
+
+        --template:[layout_name=template_path/template_name(string)]
+        Looks in the App/Templates/ directory for the view template to use This
+        option overrides and ignores the --clean option if executed together.
+
+page [page_path/page_name(string)]
+
+        Create New Page. Pages are a pre-configured combination of Views and
+        Controllers organized by layout and template logic. This command exists
+        to help create web pages quickly using the Qaton CLI. Default layout and
+        template logic is copied from the Qaton core upon first use into user
+        editable space within the App. This logic is then used in all subsequent
+        Page creations. 

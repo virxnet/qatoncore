@@ -1,0 +1,24 @@
+
+* * * Migrate Help * * * 
+
+This module will assist managing database migrations 
+
+Usage: 
+
+install
+
+        Install all pending migrations
+
+revert
+
+        Revert migration installations by undoing them as defined in the down()
+        method of the last installed migration (or several last with --steps)
+
+        Options:
+
+        --steps=[number of steps(integer)]
+        Number of migrations to revert from the most recent to oldest
+
+list
+                
+        List all migrations and their statuses

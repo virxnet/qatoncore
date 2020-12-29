@@ -1,0 +1,33 @@
+
+* * * Example Help * * * 
+
+This is a sample module for the Qaton CLI aimed at demonstrating how a Qaton
+Console Module works and also serves as a simple example for creating new ones. 
+
+Usage:      
+
+greet [greeting(string)]
+      
+      Simple data input manipulation 
+
+      Example: qaton Test greet hello world
+
+      Output: You said: hello world
+
+      Options: 
+      
+      --lines
+      Prints responses in new lines
+
+      Example: qaton Test greet hello world --lines
+
+      Output: You said: 
+      hello
+      world
+
+      --extra:[word(string):word(string)...]
+      Add extra words
+
+      Example: qaton Test greet hello --extra:foo:bar
+
+      Output: You said: hello foo world foo hello bar world bar 
