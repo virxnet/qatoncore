@@ -53,6 +53,12 @@ class FileDatabaseModel
         return $this;
     }
 
+    public function withHashed()
+    {
+        $this->db->withHashed();
+        return $this;
+    }
+
     public function verifyHashed(string $column, string $value)
     {
         $this->db->verifyHashed($column, $value);
