@@ -14,8 +14,12 @@
                     case 'integer':
                     case 'float':
                     case 'double':
+                    case 'masked':
                         echo "<input class='form-control' type='text' name='{$column}'>";
                         break;
+                    case 'hashed':
+                            echo "<input class='form-control' type='password' name='{$column}'>";
+                            break;
                     case 'foreign':
                         if (isset($foreigners[$column])) {
                             echo "<select class='form-control' name='{$column}'>";

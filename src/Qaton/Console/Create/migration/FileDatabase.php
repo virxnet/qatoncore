@@ -17,7 +17,7 @@ class /***MigrationClassName***/ extends Migration
                 'default' => 'Untitled'
             ],
             // ...
-        ]);
+        ], ['timestamps' => true]);
     }
 
     public function down()

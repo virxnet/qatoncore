@@ -103,7 +103,9 @@ final class System
         'APP_AUTH_TABLE'                    => 'users',
         'APP_AUTH'                          => [
             'USERS_TABLE'                       => 'users',
-            'ACTIVE_USERS_TABLE'                => 'active_user_sessions',
+            'USER_MODEL'                        => 'user',
+            'ACTIVE_USERS_TABLE'                => 'activeusers',
+            'ACTIVE_USER_MODEL'                 => 'ActiveUser',
             'INITIAL_USER_DEFAULTS' => [
                 'LEVEL'                             => 1,
                 'USERNAME'                          => 'admin',

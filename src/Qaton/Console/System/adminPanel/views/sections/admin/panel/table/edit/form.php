@@ -60,6 +60,9 @@
                             case 'double':
                                 echo "<input class='form-control' type='text' name='{$column}' value='{$value}'>";
                                 break;
+                            case 'hashed':
+                                echo "<input class='form-control' type='password' name='{$column}'>";
+                                break;
                             case 'text':
                                 echo "<textarea class='form-control editor' type='text' name='{$column}'>{$value}</textarea>";
                                 break;

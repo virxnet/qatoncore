@@ -1,36 +1,36 @@
 <!-- DataTales Example -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary float-left">Model Data</h6>
+        <h6 class="m-0 font-weight-bold text-primary float-left">Table: <?php echo $model->getTable() ?></h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             
-            <table class="table table-bordered " id="dataTable" width="100%" cellspacing="0">
+            <table class="table table-bordered " width="100%" id="dataTable" cellspacing="0">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>ID<br>&nbsp;</th>
                         <?php
                         foreach ($schema as $column_name => $column_props) {
-                            if ($column_props['type'] != 'text') {
-                                echo "<th>{$column_name} <small>{$column_props['type']}</small></th>";
+                            if ($column_props['type'] != 'text' && $column_name != 'deleted_on') {
+                                echo "<th>{$column_name}<br><small>{$column_props['type']}</small></th>";
                             }
                         }
                         ?>
-                        <th>Actions</th>
+                        <th>Actions<br>&nbsp;</th>
                     </tr>
                 </thead>
                 <tfoot>
                     <tr>
-                        <th>ID</th>
+                        <th>ID<br>&nbsp;</th>
                         <?php
                         foreach ($schema as $column_name => $column_props) {
-                            if ($column_props['type'] != 'text') {
-                                echo "<th>{$column_name} <small>{$column_props['type']}</small></th>";
+                            if ($column_props['type'] != 'text' && $column_name != 'deleted_on') {
+                                echo "<th>{$column_name}<br><small>{$column_props['type']}</small></th>";
                             }
                         }
                         ?>
-                        <th>Actions
+                        <th>Actions<br>&nbsp;
 
                         <a href="<?php $this->baseUrl() ?>admin/panel/table/create/<?php echo $model_slug ?>/0" class="btn btn-sm btn-success btn-icon-split float-right">
                             <span class="icon text-white-50">
@@ -47,11 +47,15 @@
                         <td><?php echo $row['id'] ?></td>
                         <?php
                         foreach ($schema as $column_name => $column_props) {
-                            if ($column_props['type'] != 'text') {
+                            if ($column_props['type'] != 'text'  && $column_name != 'deleted_on') {
                                 if ($column_props['type'] == 'foreign') {
                                     echo "<td><a href='{$this->base_url}admin/panel/table/view/:"
                                             . ucfirst($column_name) . "/{$row[$column_name]}"
                                             . "'>{$column_props['foreign']}:{$column_props['key']}: {$row[$column_name]}</a></td>";
+                                } elseif ($column_props['type'] == 'timestamp' && !is_null($row[$column_name])) {
+                                    echo "<td>" . date('Y-m-d h:i:s', $row[$column_name]) . "</td>";
+                                } elseif ($column_props['type'] == 'hashed') {
+                                    echo "<td>********</td>";
                                 } else {
                                     echo "<td>{$row[$column_name]}</td>";
                                 }

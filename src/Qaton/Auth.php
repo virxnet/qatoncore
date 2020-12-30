@@ -34,11 +34,10 @@ final class Auth
             $db = Db::init($_ENV['QATON_CONFIG']);
             $active = $db->table($_ENV['QATON_CONFIG']['APP_AUTH']['ACTIVE_USERS_TABLE'])
                             ->where('user', $user['id'])
+                            ->verifyHashed('key', $user_key)
                             ->first();
-            if (is_array($active) && isset($active['salt']) && isset($active['key'])) {
-                if (self::decrypt($user_key, $active['salt'], $active['key']) === true) {
-                    return true;
-                }
+            if (is_array($active) && isset($active['key'])  && $active['key'] === true) {
+                return true;
             }
         }
 
@@ -68,6 +67,7 @@ final class Auth
         return Session::get($instance->config['APP_AUTH']['SESSION_NAME']);
     }
 
+    
     public static function decrypt(string $string, string $salt, string $hash)
     {
         return password_verify($string . $salt, $hash);
@@ -112,79 +112,75 @@ final class Auth
         $request = new Request($instance->config['APP_URL_SUB_DIR']);
 
         if (!isset($request->post['username']) || !isset($request->post['password'])) {
-            return null;
+            return false;
         }
 
         $instance->db = Db::init($instance->config);
         $instance->db->table($instance->config['APP_AUTH']['USERS_TABLE']);
         $user = $instance->db->select('*')
                             ->where('username', $request->post['username'])
-                            ->get();
-
+                            ->verifyHashed('password', $request->post['password'])
+                            ->first();
         
         if (empty($user)) {
             return false;
         }
 
-        if ($instance::decrypt($request->post['password'], $user[0]['salt'], $user[0]['password'])) {
-            $rand = microtime(true) . rand(0, 9999999999);
-            $key = $instance::encrypt($rand);
-            unset($user[0]['level']);
-            unset($user[0]['password']);
-            unset($user[0]['salt']);
-            Session::set($instance->config['APP_AUTH']['SESSION_NAME'], $user[0]);
-            setcookie(
-                $instance->config['APP_AUTH']['COOKIE_NAME'],
-                $rand,
-                time() + $instance->config['APP_AUTH']['COOKIE_EXPIRY']
-            );
-            $instance->db->table($instance->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
-                        ->where('user', $user[0]['id'])
-                        ->purge();
-            // TODO: perhaps this is not necessary, consider depreciating
-            $instance->db->table($instance->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
-                        ->insert([
-                            'user' => $user[0]['id'],
-                            'key' => $key['hash'],
-                            'salt' => $key['salt']
-                        ]);
-            if (is_null($redirect)) {
-                return true;
-            } else {
-                HttpHeaders::redirect($redirect);
-            }
-        } else {
+        if (is_null($user['password']) || $user['password'] === false) {
             return false;
         }
+
+
+        $rand = microtime(true) . rand(0, 9999999999);
+        Session::set($instance->config['APP_AUTH']['SESSION_NAME'], $user);
+        setcookie(
+            $instance->config['APP_AUTH']['COOKIE_NAME'],
+            $rand,
+            time() + $instance->config['APP_AUTH']['COOKIE_EXPIRY']
+        );
+        $instance->db->table($instance->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
+                    ->where('user', $user['id'])
+                    ->purge();
+        // TODO: evaluate security 
+        $instance->db->table($instance->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
+                    ->insert([
+                        'user' => $user['id'],
+                        'key' => $rand,
+                        'since' => time()
+                    ]);
+        if (is_null($redirect)) {
+            return true;
+        } else {
+            HttpHeaders::redirect($redirect);
+        }
+   
 
     }
 
     public function install()
     {
-        $encrypted_password = $this::encrypt($this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['PASSWORD']);
         $this->db = Db::init($this->config);
         if (
             $this->db->table($this->config['APP_AUTH']['USERS_TABLE'])
                         ->create([
                             'level' => ['type' => 'integer', 'null' => false],
-                            'username' => ['type' => 'string', 'null' => false],
-                            'email' => ['type' => 'string'],
-                            'password' => ['type' => 'string', 'null' => false],
-                            'salt' => ['type' => 'string', 'null' => false],
+                            'username' => ['type' => 'string', 'null' => false, 'unique' => true],
+                            'email' => ['type' => 'string', 'unique' => true],
+                            'password' => ['type' => 'hashed', 'null' => false],
                             'first_name' => ['type' => 'string'],
                             'last_name' => ['type' => 'string'],
+                        ], [
+                            'timestamps' => true
                         ])
         ) {
             $this->db->insert([
                 'level' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['LEVEL'],
                 'username' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['USERNAME'],
                 'email' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['EMAIL'],
-                'password' => $encrypted_password['hash'],
-                'salt' => $encrypted_password['salt'],
+                'password' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['PASSWORD'],
                 'first_name' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['FIRSTNAME'],
                 'last_name' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['LASTNAME']
             ]);
-            // TODO: perhaps this is not necessary, consider depreciating
             $this->db->table($this->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
                     ->create([
                         'user' => [
@@ -192,8 +188,7 @@ final class Auth
                                     'foreign' => $this->config['APP_AUTH']['USERS_TABLE'],
                                     'key' => 'id'
                                 ],
-                        'key' => ['type' => 'string', 'null' => false],
-                        'salt' => ['type' => 'string', 'null' => false],
+                        'key' => ['type' => 'hashed', 'null' => false],
                         'since' => ['type' => 'timestamp']
                     ]);
             return true;

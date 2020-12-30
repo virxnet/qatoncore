@@ -46,8 +46,6 @@ class System extends Console
     public function adminPanel()
     {
 
-        Console::output('Installing Admin Panel...');
-
         $source = __DIR__ . DIRECTORY_SEPARATOR . 'System' . DIRECTORY_SEPARATOR
                         . 'adminPanel' . DIRECTORY_SEPARATOR;
         $res_map = [
@@ -69,6 +67,7 @@ class System extends Console
         ];
 
         if (isset($this->options['reinstall'])) {
+                Console::output('Reinstalling Admin Panel...');
                 unset($this->options['reinstall']);
                 $this->options['clean'] = true;
                 $this->options['install'] = true;
@@ -78,6 +77,7 @@ class System extends Console
         if (isset($this->options['clean'])) {
             Console::outputWarn('!!! This will delete all your admin panel customizations. This can not be undone !!!');
             $clean = Console::input('Are you sure you want to delete the admin panel? (yes/no)');
+            Console::output('Removing Admin Panel...');
             foreach ($res_map as $source => $target) {
                 if ($clean === 'yes') {
                     Console::outputNotice('Deleting ' . $target);
@@ -93,6 +93,11 @@ class System extends Console
             $this->auth();
             Console::input('Press enter to install files');
             $create = new Create($this->system, []);
+            require_once('Create.php');
+            $create->options['table'] = $this->config['APP_AUTH']['USERS_TABLE'];
+            $create->model([$this->config['APP_AUTH']['USER_MODEL']]);
+            $create->options['table'] = $this->config['APP_AUTH']['ACTIVE_USERS_TABLE'];
+            $create->model([$this->config['APP_AUTH']['ACTIVE_USER_MODEL']]);
             $failed = false;
             foreach ($res_map as $source => $target) {
                 if (realpath($target)) {
@@ -119,7 +124,7 @@ class System extends Console
             Console::output('Installing Auth...');
             $auth = new Auth();
             if ($auth->install()) {
-                Console::outputSuccess('Install Complete!', 2, 1);
+                Console::outputSuccess('Auth Installation Complete!', 2, 1);
             } else {
                 Console::outputWarn('Installation Failed! Probably already installed or no database connection...', 2, 1);
             }

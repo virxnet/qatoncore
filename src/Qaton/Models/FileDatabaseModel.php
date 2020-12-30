@@ -47,6 +47,18 @@ class FileDatabaseModel
         return $this;
     }
 
+    public function unmask()
+    {
+        $this->db->unmask();
+        return $this;
+    }
+
+    public function verifyHashed(string $column, string $value)
+    {
+        $this->db->verifyHashed($column, $value);
+        return $this;
+    }
+
     public function where(string $column, $value_or_operator, $value_with_operator = false)
     {
         $this->db->where($column, $value_or_operator, $value_with_operator);
@@ -130,5 +142,10 @@ class FileDatabaseModel
     {
         $instance = new static();
         return $instance->db->get();
+    }
+
+    public function getTable()
+    {
+        return $this->table;
     }
 }

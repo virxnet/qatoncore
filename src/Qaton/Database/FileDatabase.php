@@ -40,8 +40,16 @@ class FileDatabase
     public const JSON_EXT          = '.json';
     public const LOG_EXT           = '.log';
     public const TEXT_VAL          = '~txt';
+    public const MASKED_VAL        = '********';
     public const DATA_DIR_SUFFIX   = '-data';
     public const WILDCARD          = '*';
+    public const HASH_CONFIG       = [
+                                    'RAND_START' => 1000000000000000,
+                                    'RAND_END' => 9999999999999999,
+                                    'USE_UNIXTIME' => true,
+                                    'COST' => 12,
+                                    'ALGO' => 'PASSWORD_BCRYPT'
+                                    ];
 
     public const WHERE_OPERATORS   =   [
                                     '=',
@@ -71,12 +79,16 @@ class FileDatabase
     public const TYPE_TEXT         = 'text';
     public const TYPE_TIMESTAMP    = 'timestamp';
     public const TYPE_FOREIGN      = 'foreign';
+    public const TYPE_MASKED       = 'masked';
+    public const TYPE_HASHED       = 'hashed';
 
     public const PROP_TYPE         = 'type';
     public const PROP_KEY          = 'key';
     public const PROP_NULL         = 'null';
     public const PROP_FOREIGN      = 'foreign';
     public const PROP_DEFAULT      = 'default';
+    public const PROP_UNIQUE       = 'unique';
+
 
     public const OPTION_TIMESTAMPS = 'timestamps';
 
@@ -104,8 +116,8 @@ class FileDatabase
                                     'INVALID_UPDATE_DATA' => 'invalid update data',
                                     'UNSUPPORTED_WHERE_OPERATOR' => 'unsupported where clause condition operator',
                                     'NON_NUMERIC_COMPARISON' => 'where clause tryting to compare non numeric values',
-                                    'REQUIRED_DATA_MISSING' => 'required column missing data, null not allowed'
-
+                                    'REQUIRED_DATA_MISSING' => 'required column missing data, null not allowed',
+                                    'UNIQUE_CONSTRAINT_VOLIATION' => 'violation of unique data constraint'
                                 ];
 
     public const DB_TIMESTAMP_FMT  = 'Y-m-d h:i:s';
@@ -130,6 +142,9 @@ class FileDatabase
     private $where_columns = array();
     private $where_operators = array();
     private $where_values = array();
+    private $masked = true;
+    private $verify_unhashed_columns = array();
+    private $with_hashed = false;
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -183,6 +198,24 @@ class FileDatabase
     {
         $this->_log(__METHOD__, $limit);
         $this->limit = $limit;
+        return $this;
+    }
+
+    public function unmask() 
+    {
+        $this->masked = false;
+        return $this;
+    }
+
+    public function withHashed()
+    {
+        $this->with_hashed = true;
+        return $this;
+    }
+
+    public function verifyHashed(string $column, string $value)
+    {
+        $this->verify_unhashed_columns[$column] = $value;
         return $this;
     }
 
@@ -462,6 +495,27 @@ class FileDatabase
                                     }
                                 }
                                 break;
+
+                            case self::TYPE_MASKED:
+                                if (isset($where_filtered[$col]) && $this->masked === true) {
+                                    $where_filtered[$col] = self::MASKED_VAL;
+                                }
+                                break;
+
+                            case self::TYPE_HASHED:
+                                    if (isset($where_filtered[$col])) {
+                                        if (isset($this->verify_unhashed_columns[$col])) {
+                                            $where_filtered[$col] = $this->verifyEncodedHash(
+                                                $this->verify_unhashed_columns[$col],
+                                                $where_filtered[$col]
+                                            );
+                                        } else {
+                                            if ($this->with_hashed === false) {
+                                                $where_filtered[$col] = null;
+                                            }
+                                        }
+                                    }
+                                    break;
                         }
                     }
 
@@ -540,7 +594,16 @@ class FileDatabase
             $id = $this->_auto_increment();
             $this->last_insert_id = false;
 
+            foreach ($data as $col => $value) {
+                if (array_key_exists($col, $this->schema[self::SCHEMA_TABLES][$this->table])) {
+                    $data[$col] = $this->_process_insert_value($col, $id, $value);
+                } else {
+                    $this->_error(self::ERRORS['UNKNOWN_COLUMN'], ['table' => $this->table, 'column' => $col, 'value' => $value]);
+                }
+            }
+
             // Insert Rules (e.g. Not Null and Defaults)
+            // TODO: This should be moved so the update method can also use it like the _process_insert_values needs to be used with updates
             foreach ($this->schema[self::SCHEMA_TABLES][$this->table] as $col => $col_props) {
                 foreach ($col_props as $col_prop => $col_prop_val) {
                     switch ($col_prop) {
@@ -550,8 +613,18 @@ class FileDatabase
                                     if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_DEFAULT])) {
                                         $data[$col] = $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_DEFAULT];
                                     } else {
-                                        $this->_error_fatal(self::ERRORS['REQUIRED_DATA_MISSING'], $col);
+                                        $this->_error_fatal(self::ERRORS['REQUIRED_DATA_MISSING'], ['column' => $col]);
                                     }
+                                }
+                            }
+                            break;
+                        case self::PROP_UNIQUE:
+                            if ($col_prop_val == true) {
+                                $db = new FileDatabase();
+                                $db->load($this->database_dir);
+                                $rows = $db->table($this->table)->where($col, $data[$col])->get();
+                                if (!empty($rows)) {
+                                    $this->_error_fatal(self::ERRORS['UNIQUE_CONSTRAINT_VOLIATION'], ['column' => $col]);
                                 }
                             }
                             break;
@@ -559,13 +632,7 @@ class FileDatabase
                 }
             }
 
-            foreach ($data as $col => $value) {
-                if (array_key_exists($col, $this->schema[self::SCHEMA_TABLES][$this->table])) {
-                    $data[$col] = $this->_process_insert_value($col, $id, $value);
-                } else {
-                    $this->_error(self::ERRORS['UNKNOWN_COLUMN'], ['table' => $this->table, 'column' => $col, 'value' => $value]);
-                }
-            }
+            
 
             // Options
             if (array_key_exists(self::COL_CREATED, $this->schema[self::SCHEMA_TABLES][$this->table])) {
@@ -690,39 +757,51 @@ class FileDatabase
 
         if ($this->_is_assoc_array($data)) {
 
-            $records = $this->_get_clean_records();
+            $records = $this->_get_clean_records(); //TODO: fix this, it seems very inefficient
 
             foreach ($records as $index => $record) {
                 if (isset($record[self::COL_ID])) {
                     $this->_set_row($record[self::COL_ID]);
                 }
-                foreach ($data as $key => $value) {
-                    if (isset($record[$key])) {
-                        switch ($this->table_schema[$key]['type']) {
+                // TODO: use _process_insert_value after renaming it so there isn't duplication and
+                //       the logic is consistent?
+                foreach ($this->table_schema as $col => $props) {
+                    if (isset($data[$col])) {
+                        switch ($this->table_schema[$col]['type']) {
                             case self::TYPE_INTEGER:
                             case self::TYPE_INT:
-                                $records[$index][$key] = (int)$value;
+                                $records[$index][$col] = (int)$data[$col];
+                                break;
+
+                            case self::TYPE_HASHED:
+                                if (!is_null($data[$col]) && $data[$col] !== '') {
+                                    $records[$index][$col] = $this->makeEncodedHash($data[$col]);
+                                }
                                 break;
 
                             case self::TYPE_FLOAT:
                             case self::TYPE_DOUBLE:
-                                $records[$index][$key] = (float)$value;
+                                $records[$index][$col] = (float)$data[$col];
                                 break;
 
                             case self::TYPE_TEXT:
-                                $file = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$key}" . self::TEXT_EXT;
-                                $this->_write_file($file, $value);
+                                $file = $this->row_data_dir . DIRECTORY_SEPARATOR . $data[$col] . self::TEXT_EXT;
+                                $this->_write_file($file, $data[$col]);
                                 break;
- 
+
+                            case self::TYPE_TIMESTAMP:
+                                $records[$index][$col] = (int)$data[$col];
+                                break;
+
                             // TODO: foreign intellignent type switch based on key > schema > type
 
                             default:
-                                $records[$index][$key] = $value;
+                                $records[$index][$col] = $data[$col];
                         }
                     }
                 }
 
-                if (isset($records[$index][self::SCHEMA_UPDATED])) {
+                if (isset($records[$index][self::SCHEMA_UPDATED]) || is_null($records[$index][self::SCHEMA_UPDATED])) {
                     $records[$index][self::SCHEMA_UPDATED] = time();
                 }
             }
@@ -832,10 +911,11 @@ class FileDatabase
 
     private function _get_clean_records()
     {
+        // TODO: This seems inefficient as it's used even on updates, see optimization possibilities
         $this->selects = false;
         $human_friendly = $this->human_friendly;
         $this->human_friendly = false;
-        $records = $this->table($this->table)->get();
+        $records = $this->table($this->table)->withHashed()->unmask()->get(); // TODO: apply active where clauses?
         $this->human_friendly = $human_friendly;
         return $records;
     }
@@ -852,7 +932,12 @@ class FileDatabase
  
         switch ($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_TYPE]) {
             case self::TYPE_STRING:
+            case self::TYPE_MASKED:
                 return (string)$value;
+            break;
+
+            case self::TYPE_HASHED:
+                return $this->makeEncodedHash($value);
             break;
 
             case self::TYPE_INTEGER:
@@ -1026,6 +1111,50 @@ class FileDatabase
         return true;
     }
 
+    private function makeEncodedHash(string $string, $salt = false)
+    {
+        if ($salt === false) {
+            if (self::HASH_CONFIG['USE_UNIXTIME'] === true) {
+                $time = time();
+            } else {
+                $time = null;
+            }
+            $salt = $time . uniqid(rand(
+                                        self::HASH_CONFIG['RAND_START'],
+                                        self::HASH_CONFIG['RAND_END']
+                                    ));
+        }
+        $options = [
+            'cost' => self::HASH_CONFIG['COST'],
+        ];
+        switch (self::HASH_CONFIG['ALGO']) {
+            case 'PASSWORD_BCRYPT':
+                $hash = password_hash($string . $salt, PASSWORD_BCRYPT, $options);
+                break;
+            case 'PASSWORD_ARGON2I':
+                $hash = password_hash($string . $salt, PASSWORD_ARGON2I, $options);
+                break;
+            case 'PASSWORD_ARGON2ID':
+                    $hash = password_hash($string . $salt, PASSWORD_ARGON2ID, $options);
+                    break;
+            default:
+                $hash = password_hash($string . $salt, PASSWORD_DEFAULT, $options);
+        }
+        return base64_encode(json_encode([
+            'hash' => $hash,
+            'salt' => $salt
+        ]));
+    }
+
+    private function verifyEncodedHash(string $string, string $base64_json_encoded_hash_salt_array)
+    {
+        if ($arr = json_decode(base64_decode($base64_json_encoded_hash_salt_array), null, 512, JSON_OBJECT_AS_ARRAY)) {
+            return password_verify($string . $arr['salt'], $arr['hash']);
+        }
+
+        return false;
+    }
+
     private function _rmdir(string $directory)
     {
         $this->_log(__METHOD__, $directory);
@@ -1156,7 +1285,7 @@ class FileDatabase
     private function _error_fatal($message = false, $data = false) {
         $this->_error($message, $data, 'FATAL ERROR');
         if ($this->debug_print_fatals_text === true) {
-            throw new Error($message, ['table' => $data], 1003);
+            throw new Error($message, ['data' => $data], 1003);
         }
         exit();
     }

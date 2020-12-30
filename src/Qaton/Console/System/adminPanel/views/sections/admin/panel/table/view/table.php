@@ -38,6 +38,9 @@
                             case 'text':
                                 echo "<textarea class='form-control editor' type='text' name='{$column}'>{$value}</textarea>";
                                 break;
+                            case 'hashed':
+                                echo "********";
+                                break;
                             default:
                                 echo $value;
                         }

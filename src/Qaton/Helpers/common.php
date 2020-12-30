@@ -14,21 +14,18 @@ if (!function_exists('_getNamespaceByPath')) {
 }
 
 if (!function_exists('mb_substr')) {
-    __debug('mb_substr', 'WARNING: You should install PHP mbstring');
     function mb_substr($string, $start, $length = null, $encoding = null) {
         return substr($string, $start, $length);
     }
 }
 
 if (!function_exists('mb_strlen')) {
-    __debug('mb_strlen', 'WARNING: You should install PHP mbstring');
     function mb_strlen($string, $encoding = null) {
         return strlen($string);
     }
 }
 
 if (!function_exists('mb_strtolower')) {
-    __debug('mb_strtolower', 'WARNING: You should install PHP mbstring');
     function mb_strtolower($string, $encoding = null) {
         return strtolower($string);
     }

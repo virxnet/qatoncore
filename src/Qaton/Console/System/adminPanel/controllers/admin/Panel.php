@@ -107,7 +107,9 @@ class Panel
 
                 $data = [];
                 foreach ($this->data['schema'] as $column => $props) {
-                    $data[$column] = $this->request->post[$column];
+                    if (isset($this->request->post[$column]) && $this->data['schema'][$column]['type'] !== 'masked') {
+                        $data[$column] = $this->request->post[$column];
+                    }
                 }
 
                 if ($model->where('id', $id)->update($data)) {

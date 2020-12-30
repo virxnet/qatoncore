@@ -38,7 +38,7 @@ class Create extends Console
 
         $table = false;
         if (!isset($this->options['table']) && $args == 1) {
-            $table = $this->options['table'];
+            $table = mb_strtolower($this->options['table']);
         }
 
         $this->checkCommonRequirements($args, 'migration', false);
@@ -46,14 +46,14 @@ class Create extends Console
         $template_file = $this->getTemplateFile('migration');
 
         foreach ($args as $arg) {
-            $migration = strtolower(time() . '_' . $arg);
+            $migration = mb_strtolower(time() . '_' . $arg);
 
             Console::output("Creating Migration {$migration}...", 2, 1);
 
             switch ($this->config['APP_DATABASE_TYPE']) {
                 case 'FileDatabase':
                     if ($table === false) {
-                        $table = $arg . 's'; // TODO: implement proper pluralization
+                        $table = mb_strtolower($arg) . 's'; // TODO: implement proper pluralization
                     }
                     $template_data = array(
                         '/***MigrationDescription***/' => 'a migration for ' . $arg,
@@ -81,7 +81,7 @@ class Create extends Console
 
         $table = false;
         if (!isset($this->options['table']) && $args == 1) {
-            $table = $this->options['table'];
+            $table = mb_strtolower($this->options['table']);
         }
 
         $this->checkCommonRequirements($args, 'model', false);
@@ -102,7 +102,7 @@ class Create extends Console
             Console::output("Creating Model {$model_file}...", 2, 1);
 
             if ($table === false) {
-                $table = $model . 's'; // TODO: implement proper pluralization
+                $table = mb_strtolower($model) . 's'; // TODO: implement proper pluralization
             }
 
             $template_data = array(
@@ -200,7 +200,7 @@ class Create extends Console
                 $template_data['/***ViewData***/'] = '$data = [];';
                 $template_data['/***ViewRender***/'] = "\n        " // new line and indent
                                 . '$this->view->render("' . $controller_path . DIRECTORY_SEPARATOR
-                                . strtolower($controller_class) . '", $data);';
+                                . mb_strtolower($controller_class) . '", $data);';
                 if (isset($this->options['section']) && isset($this->options['layout'])) {
                     $template_data['/***ViewSection***/'] = "\n        " // new line and indent
                                 . '$this->view->section("' . $this->options['section']
@@ -338,7 +338,7 @@ class Create extends Console
                 break;
             default:
                 $target = pathinfo($target)['dirname'] . DIRECTORY_SEPARATOR
-                            . strtolower(pathinfo($target)['basename']);
+                            . mb_strtolower(pathinfo($target)['basename']);
         }
 
         if (realpath($target)) {
@@ -425,7 +425,7 @@ class Create extends Console
 
     private function getPascalCaseName(string $string)
     {
-        return implode('', array_map('ucfirst', explode('_', strtolower($string))));
+        return implode('', array_map('ucfirst', explode('_', $string)));
     }
 
     private function getNamespaceByPath($path)
