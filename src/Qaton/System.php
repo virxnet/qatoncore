@@ -348,8 +348,19 @@ final class System
     public function loadHelpers()
     {
         foreach (self::SYSTEM_HELPERS as $helper) {
-            include_once(__DIR__ . DIRECTORY_SEPARATOR . 'Helpers' . DIRECTORY_SEPARATOR . $helper . self::PHP_EXT);
+            include_once __DIR__ . DIRECTORY_SEPARATOR 
+                        . 'Helpers' . DIRECTORY_SEPARATOR 
+                        . $helper . self::PHP_EXT ;
         }
+    }
+
+
+    public static function appAutoload ($class_Name) 
+    {
+        include_once $_ENV['QATON_CONFIG']['APP_PATH'] 
+                        . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR
+                        . str_replace("\\", DIRECTORY_SEPARATOR, $class_Name)
+                        . self::PHP_EXT;
     }
 
 

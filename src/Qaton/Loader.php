@@ -13,7 +13,7 @@ class Loader
         $this->controller_namespace = $namespace;
         $this->controller_class = $this->controller_namespace . $class;
         $this->controller_file = $file;
-        $this->registerAutoload();
+        //$this->registerAutoload();
         if ($output === false) {
             ob_start();
         }
@@ -24,10 +24,12 @@ class Loader
         return $controller;
     }
 
+    /*
     private function registerAutoload()
     {
         spl_autoload_register(function ($class) {
             require_once($this->controller_file);
         });
     }
+    */
 }

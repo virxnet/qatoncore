@@ -22,6 +22,7 @@ final class App
         $this->system = new System();
         $this->system->setAppPath($appPath);
         $this->system->setBasePath($basePath);
+        spl_autoload_register("\VirX\Qaton\System::appAutoload");
     }
 
     public function setConfig(array $config)
