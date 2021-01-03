@@ -30,3 +30,36 @@ if (!function_exists('mb_strtolower')) {
         return strtolower($string);
     }
 }
+
+if (!function_exists('getUserAgent')) {
+    function getUserAgent() 
+    {
+        if ($agent = @get_browser(null, true)) 
+        {
+            return $agent;
+        } elseif ($_SERVER['HTTP_USER_AGENT']) {
+            $agent_parts = explode(' ', $_SERVER['HTTP_USER_AGENT']);
+            return [
+                'HTTP_USER_AGENT' => $_SERVER['HTTP_USER_AGENT'],
+                'parent' => end($agent_parts)
+            ];
+        } else {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('getIP')) {
+    function getIP() 
+    {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $ip_address = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            // from proxy?
+            $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+            $ip_address = $_SERVER['REMOTE_ADDR'];
+        }
+        return $ip_address;
+    }
+}

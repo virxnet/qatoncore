@@ -166,7 +166,7 @@ class Panel
         ) . '\\' . basename($model), 1);
 
         if (realpath($model_file)) {
-            require_once($model_file);
+            require_once($model_file); // this is not necessary since autoloading has been implemented
             if (class_exists($model_with_namespace)) {
                 $model = new $model_with_namespace();
                 if (method_exists($model, 'all')) {

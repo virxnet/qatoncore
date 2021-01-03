@@ -8,7 +8,7 @@ class FileDatabase
 {
 
     public const CLASS_NAME        = "VirX Qaton FileDatabase";
-    public const CLASS_VERSION     = "0.1";
+    public const CLASS_VERSION     = "1.0.0";
     public const AUTHOR            = "Antony Shan Peiris <asp@virx.net>";
     public const WEBSITE           = "http://qaton.virx.net";
 
@@ -574,6 +574,8 @@ class FileDatabase
         $ids = [];
         foreach ($records as $record) {
             unset($record[self::COL_ID]);
+            // TODO: make it possible to detect 'unique' prop fields and suffix them with an iterator 
+            //       so that cloning fields that have the unique prop are possible
             $ids[] = $this->insert($record);
         }
         return $ids;
@@ -785,7 +787,7 @@ class FileDatabase
                                 break;
 
                             case self::TYPE_TEXT:
-                                $file = $this->row_data_dir . DIRECTORY_SEPARATOR . $data[$col] . self::TEXT_EXT;
+                                $file = $this->row_data_dir . DIRECTORY_SEPARATOR . $col . self::TEXT_EXT;
                                 $this->_write_file($file, $data[$col]);
                                 break;
 
@@ -801,7 +803,7 @@ class FileDatabase
                     }
                 }
 
-                if (isset($records[$index][self::SCHEMA_UPDATED]) || is_null($records[$index][self::SCHEMA_UPDATED])) {
+                if (isset($records[$index][self::SCHEMA_UPDATED])) {
                     $records[$index][self::SCHEMA_UPDATED] = time();
                 }
             }
@@ -1179,10 +1181,12 @@ class FileDatabase
     private function _mkdir(string $directory)
     {
         $this->_log(__METHOD__, $directory);
-        if (!@mkdir($directory, octdec($this->chmod), true))
-        {
-            $this->_error_fatal(self::ERRORS['DIR_NOT_CREATABLE'], $directory);
-        }
+        if (!is_dir($directory)) {
+            if (!@mkdir($directory, octdec($this->chmod), true))
+            {
+                $this->_error_fatal(self::ERRORS['DIR_NOT_CREATABLE'], $directory);
+            }
+        } 
         @chmod($directory, octdec($this->chmod));
         @chown($directory, $this->chown_user);
         @chgrp($directory, $this->chown_group);

@@ -142,10 +142,16 @@ final class Auth
                     ->where('user', $user['id'])
                     ->purge();
         // TODO: evaluate security 
+
+        $agent = getUserAgent();
+
         $instance->db->table($instance->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
                     ->insert([
                         'user' => $user['id'],
                         'key' => $rand,
+                        'agent' => $agent['parent'],
+                        'agent_data' => json_encode($agent),
+                        'ip' => getIP(),
                         'since' => time()
                     ]);
         if (is_null($redirect)) {
@@ -162,35 +168,44 @@ final class Auth
         $this->db = Db::init($this->config);
         if (
             $this->db->table($this->config['APP_AUTH']['USERS_TABLE'])
-                        ->create([
-                            'level' => ['type' => 'integer', 'null' => false],
-                            'username' => ['type' => 'string', 'null' => false, 'unique' => true],
-                            'email' => ['type' => 'string', 'unique' => true],
-                            'password' => ['type' => 'hashed', 'null' => false],
-                            'first_name' => ['type' => 'string'],
-                            'last_name' => ['type' => 'string'],
-                        ], [
-                            'timestamps' => true
-                        ])
+            ->create(
+                [
+                    'level' => ['type' => 'integer', 'null' => false],
+                    'username' => ['type' => 'string', 'null' => false, 'unique' => true],
+                    'email' => ['type' => 'string', 'unique' => true],
+                    'password' => ['type' => 'hashed', 'null' => false],
+                    'first_name' => ['type' => 'string'],
+                    'last_name' => ['type' => 'string'],
+                    ], [
+                    'timestamps' => true
+                ]
+            )
         ) {
-            $this->db->insert([
-                'level' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['LEVEL'],
-                'username' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['USERNAME'],
-                'email' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['EMAIL'],
-                'password' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['PASSWORD'],
-                'first_name' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['FIRSTNAME'],
-                'last_name' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['LASTNAME']
-            ]);
+            $this->db->insert(
+                [
+                    'level' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['LEVEL'],
+                    'username' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['USERNAME'],
+                    'email' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['EMAIL'],
+                    'password' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['PASSWORD'],
+                    'first_name' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['FIRSTNAME'],
+                    'last_name' => $this->config['APP_AUTH']['INITIAL_USER_DEFAULTS']['LASTNAME']
+                ]
+            );
             $this->db->table($this->config['APP_AUTH']['ACTIVE_USERS_TABLE'])
-                    ->create([
+                ->create(
+                    [
                         'user' => [
                                     'type' => 'foreign',
                                     'foreign' => $this->config['APP_AUTH']['USERS_TABLE'],
                                     'key' => 'id'
                                 ],
                         'key' => ['type' => 'hashed', 'null' => false],
+                        'agent' => ['type' => 'string'],
+                        'agent_data' => ['type' => 'text'],
+                        'ip' => ['type' => 'string'],
                         'since' => ['type' => 'timestamp']
-                    ]);
+                    ]
+                );
             return true;
         } else {
             return false;
