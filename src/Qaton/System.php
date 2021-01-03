@@ -357,10 +357,14 @@ final class System
 
     public static function appAutoload ($class_Name) 
     {
-        include_once $_ENV['QATON_CONFIG']['APP_PATH'] 
-                        . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR
-                        . str_replace("\\", DIRECTORY_SEPARATOR, $class_Name)
-                        . self::PHP_EXT;
+        $file = $_ENV['QATON_CONFIG']['APP_PATH'] 
+        . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR
+        . str_replace("\\", DIRECTORY_SEPARATOR, $class_Name)
+        . self::PHP_EXT;
+        if (realpath($file)) {
+            include_once $file;
+        }
+        
     }
 
 
