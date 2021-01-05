@@ -93,7 +93,7 @@
     <!-- Page level custom scripts -->
     <script src="<?php $this->baseUrl() ?>assets/admin/sb-admin-2/js/demo/datatables-demo.js"></script>
 
-    <?php $this->yeild('tinymce') ?>
+    <?php $this->render('common/admin/tinymce') ?>
 
 </body>
 

@@ -36,7 +36,7 @@
                                 echo $value;
                                 break;
                             case 'text':
-                                echo "<textarea class='form-control editor' type='text' name='{$column}'>{$value}</textarea>";
+                                echo "<textarea class='form-control editor_view_only' type='text' name='{$column}'>{$value}</textarea>";
                                 break;
                             case 'hashed':
                                 echo "********";
