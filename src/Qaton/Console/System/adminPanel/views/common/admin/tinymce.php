@@ -1,9 +1,19 @@
 <script src="<?php $this->baseUrl() ?>assets/admin/tinymce/js/tinymce/tinymce.min.js"></script>
 <script type="text/javascript">
+//var useDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 tinymce.init({
     selector: '.editor',
+    toolbar_mode: 'sliding',
+    toolbar: 'code codesample | undo redo | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist checklist | fontselect fontsizeselect formatselect | forecolor backcolor casechange permanentpen formatpainter removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media pageembed template link anchor | a11ycheck ltr rtl | showcomments addcomment restoredraft',
     browser_spellcheck: true,
-    plugins: 'code searchreplace wordcount textcolor table media fullscreen colorpicker autoresize codesample',
+    plugins: 'colorpicker textcolor print preview importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
+    autosave_ask_before_unload: true,
+    autosave_interval: '10s',
+    autosave_prefix: 'qaton-autosave-{path}{query}-{id}-',
+    autosave_restore_when_empty: false,
+    autosave_retention: '60m',
+    //skin: useDarkMode ? 'oxide-dark' : 'oxide',
+    content_style: "body {margin: 10px}",
     codesample_languages: [
         {text:"PHP",value:"php"},
         {text:'HTML/XML',value:'markup'},
@@ -120,16 +130,20 @@ tinymce.init({
     ],
     height: 600,
     branding: false,
-    draggable_modal: true
+    draggable_modal: true,
+    content_css : "/assets/admin/styles/bootstrap.min.css"
 });
 tinymce.init({
     selector: '.editor_view_only',
     browser_spellcheck: true,
-    plugins: 'autoresize codesample',
+    plugins: 'autoresize wordcount codesample',
+    //skin: useDarkMode ? 'oxide-dark' : 'oxide',
+    content_style: "body {margin: 10px}",
     height: 600,
     branding: false,
     toolbar: '',
     menubar: '',
+    content_css : "/assets/admin/styles/bootstrap.min.css",
     readonly: 1
 });
 </script>
