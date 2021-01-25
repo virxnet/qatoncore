@@ -36,7 +36,7 @@ final class System
      *
      * @var string
      */
-    public const RELEASE_DATE = '2021-01-08';
+    public const RELEASE_DATE = '2021-01-24';
 
     /**
      * Framework Package Author
