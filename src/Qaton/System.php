@@ -29,7 +29,7 @@ final class System
      *
      * @var string
      */
-    public const VERSION = '1.1.0';
+    public const VERSION = '1.1.4';
 
     /**
      * Framework Package Release Date
@@ -123,6 +123,7 @@ final class System
         'APP_DEFAULT_MIGRATION_CLASS'       => 'AppMigration',
         'APP_DEFAULT_METHOD'                => 'index',
         'APP_FALLBACK_CONTROLLER'           => 'Errors/Error404',
+        'APP_PROTOCOL'                      => 'auto',
         'APP_URL_SUB_DIR'                   => '/',
         'APP_SERVER_USER'                   => 'www-data',
         'APP_SERVER_GROUP'                  => 'www-data',
@@ -283,15 +284,20 @@ final class System
         if (php_sapi_name() === 'cli') {
             $this->outputMode = 'cli';
         } else {
-            switch ((Http::getHeaders())['Accept']) {
-                case 'application/json':
-                    $this->outputMode = 'json';
-                    break;
-                case 'text/plain':
-                    $this->outputMode = 'text';
-                    break;
-                default:
-                    $this->outputMode = 'html';
+            $headers = Http::getHeaders();
+            if (isset($headers['Accept'])) {
+                switch ($headers['Accept']) {
+                    case 'application/json':
+                        $this->outputMode = 'json';
+                        break;
+                    case 'text/plain':
+                        $this->outputMode = 'text';
+                        break;
+                    default:
+                        $this->outputMode = 'html';
+                }
+            } else {
+                $this->outputMode = 'html';
             }
         }
 
@@ -312,8 +318,26 @@ final class System
 
     public function setBaseUrl()
     {
-        $this->httpProtocol = (!empty(Http::server('HTTPS')) && Http::server('HTTPS') !== 'off'
+        if ($this->config['APP_PROTOCOL'] == 'auto') {
+            switch (Http::server('REQUEST_SCHEME')) {
+
+                case 'http':
+                    $this->httpProtocol = 'http://';
+                    break;
+    
+                case 'https':
+                    $this->httpProtocol = 'https://';
+                    break;
+    
+                default:
+                    $this->httpProtocol = (!empty(Http::server('HTTPS')) && Http::server('HTTPS') !== 'off'
                         || Http::server('SERVER_PORT') == 443) ? "https://" : "http://";
+                        
+            }
+        } else {
+            $this->httpProtocol = $this->config['APP_PROTOCOL'];
+        }
+        
         $this->baseUrl = $this->httpProtocol
                         . Http::server('HTTP_HOST')
                         . $this->config['APP_URL_SUB_DIR'];
