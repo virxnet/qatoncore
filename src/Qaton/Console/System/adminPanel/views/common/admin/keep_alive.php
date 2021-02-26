@@ -1,16 +1,23 @@
 <script type="text/javascript">
-window.onload = function() {
-    window.setInterval("keepAliveUpdate()", 1000);
-    window.setInterval("keepAlive()", 9000);
-};
+var keepAliveCnf = {};
+keepAliveCnf.displayUpdateInterval = 1000;
+keepAliveCnf.refreshInterval = 60000;
+  
 function keepAliveUpdate() {
-    var count = $('#keepAliveDisplay').text();
+    var count = $('#keepAliveDisplay .keep_alive_timer').text();
+    var limit = <?php echo @ini_get("session.gc_maxlifetime"); ?>.0;
     count++;
-    $('#keepAliveDisplay').text(count);
-    if (count >= 6) {
+    $('#keepAliveDisplay .keep_alive_timer').text(count);
+    if (count >= (limit/2)) {
         $('#keepAliveDisplay').removeClass('badge-success').addClass('badge-danger');
     }
+    if (count >= limit) {
+        $('#keepAliveEnding').modal('show');
+        clearInterval(keepAliveCnf.displayUpdateIntervalID);
+        clearInterval(keepAliveCnf.refreshIntervalID);
+    }
 }
+
 function keepAlive() {
     var randNum=Math.floor(Math.random()*11)
     var url = "<?php $this->baseUrl() ?>admin/panel/keep_alive?r=" + randNum;
@@ -24,15 +31,20 @@ function keepAlive() {
             dataType: 'json',
             headers: { 'X-Qaton-Debug': 'false' }
         }).done(function(data) {
-            $('#keepAliveDisplay').text(0);
-            $('#keepAliveDisplay').removeClass('badge-danger').addClass('badge-success');
+            $('#keepAliveDisplay .keep_alive_timer').text(0);
+            $('#keepAliveDisplay').removeClass('badge-warning badge-danger text-dark').addClass('badge-success');
             console.log(data);
         }).fail(function() {
-            $('#keepAliveDisplay').removeClass('badge-success').addClass('badge-danger');
+            $('#keepAliveDisplay').removeClass('badge-success').addClass('badge-warning text-dark');
         });
     } else {
         console.log('Keep Alive OFF...');
     }
     
 }
+
+$(document).ready(function() {
+    keepAliveCnf.displayUpdateIntervalID = setInterval("keepAliveUpdate()", keepAliveCnf.displayUpdateInterval);
+    keepAliveCnf.refreshIntervalID = setInterval("keepAlive()", keepAliveCnf.refreshInterval);
+});
 </script>

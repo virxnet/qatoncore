@@ -55,7 +55,7 @@ function buildModelsList(array $models, string $base_url, string $path = '/')
 <li class="nav-item">
     <span class="nav-link" href="<?php $this->baseUrl() ?>admin">
         <i class="fas fa-fw fa-user-clock"></i>
-        <span id="keepAliveDisplay" class="badge badge-success">0</span>
+        <span id="keepAliveDisplay" class="badge badge-success"><span class="keep_alive_timer">0</span>/<?php echo @ini_get("session.gc_maxlifetime"); ?></span>
         <span class="form-check-inline">
             <input type="radio" class="ml-1 form-check-input" id="keepAliveOn" name="keep_alive" value="1" checked><label class="form-check-label" for="keepAliveOn">On</label>
             <input type="radio" class="ml-1 form-check-input" id="keepAliveOff" name="keep_alive" value="0"><label class="form-check-label" for="keepAliveOff">Off</label>
@@ -132,3 +132,19 @@ function buildModelsList(array $models, string $base_url, string $path = '/')
 </ul>
 <!-- End of Sidebar -->
 
+
+<div class="modal" tabindex="-1" role="dialog" id="keepAliveEnding">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-light">
+        <h5 class="modal-title ">Session Expired</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Your session has expired. This means that any unsaved data you have open will be lost when you leave this page. Do not try to save anything here, you should login again from a separate tab or window first or copy it manually.</p>
+      </div>
+    </div>
+  </div>
+</div>
