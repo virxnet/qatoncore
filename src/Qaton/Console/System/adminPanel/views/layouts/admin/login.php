@@ -17,6 +17,8 @@
     <link href="<?php $this->baseUrl() ?>assets/admin/styles/login.css" rel="stylesheet">
 </head>
 <body class="text-center">
-    <?php $this->yeild('main') ?>
+	<div class="container">
+    	<?php $this->yeild('main') ?>
+	</div>
 </body>
 </html>

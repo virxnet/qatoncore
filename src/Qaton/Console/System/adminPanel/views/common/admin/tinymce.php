@@ -6,6 +6,7 @@ tinymce.init({
     toolbar_mode: 'sliding',
     toolbar: 'code codesample | undo redo | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist checklist | fontselect fontsizeselect formatselect | forecolor backcolor casechange permanentpen formatpainter removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media pageembed template link anchor | a11ycheck ltr rtl | showcomments addcomment restoredraft',
     browser_spellcheck: true,
+    contextmenu: false,
     plugins: 'colorpicker textcolor print preview importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
     autosave_ask_before_unload: true,
     autosave_interval: '10s',
@@ -136,6 +137,7 @@ tinymce.init({
 tinymce.init({
     selector: '.editor_view_only',
     browser_spellcheck: true,
+    contextmenu: false,
     plugins: 'autoresize wordcount codesample',
     //skin: useDarkMode ? 'oxide-dark' : 'oxide',
     content_style: "body {margin: 10px}",

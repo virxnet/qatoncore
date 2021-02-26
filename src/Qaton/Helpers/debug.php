@@ -65,7 +65,9 @@ if (!function_exists('__print_debug')) {
                 @session_start();
 
                 if (isset($_SESSION['__debug_' . $level]) && !empty($_SESSION['__debug_' . $level])) {
-                    if (
+                    if (isset($headers['X-Qaton-Debug']) && $headers['X-Qaton-Debug'] == 'false') {
+                        // do nothing
+                    } elseif (
                         (isset($headers['Content-Type']) && $headers['Content-Type'] == 'application/json') ||
                         (isset($headers['Accept']) && $headers['Accept'] == 'application/json')
                     ) {

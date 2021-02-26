@@ -44,6 +44,26 @@ function buildModelsList(array $models, string $base_url, string $path = '/')
 </li>
 
 <!-- Divider -->
+<hr class="sidebar-divider my-0">
+
+<!-- Heading -->
+<div class="sidebar-heading">
+    Keep Session Alive
+</div>
+
+<!-- Nav Item - Dashboard -->
+<li class="nav-item">
+    <span class="nav-link" href="<?php $this->baseUrl() ?>admin">
+        <i class="fas fa-fw fa-user-clock"></i>
+        <span id="keepAliveDisplay" class="badge badge-success">0</span>
+        <span class="form-check-inline">
+            <input type="radio" class="ml-1 form-check-input" id="keepAliveOn" name="keep_alive" value="1" checked><label class="form-check-label" for="keepAliveOn">On</label>
+            <input type="radio" class="ml-1 form-check-input" id="keepAliveOff" name="keep_alive" value="0"><label class="form-check-label" for="keepAliveOff">Off</label>
+        </span>
+    </span>
+</li>
+
+<!-- Divider -->
 <hr class="sidebar-divider">
 
 <!-- Heading -->

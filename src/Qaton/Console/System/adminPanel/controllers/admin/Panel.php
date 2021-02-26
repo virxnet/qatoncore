@@ -20,6 +20,11 @@ class Panel
         $this->data['models'] = $this->getModels();
     }
 
+    public function keep_alive()
+    {
+        echo json_encode(['time' => date('H:i:s', time())]);
+    }
+
     public function model(string $model_slug)
     {
         $this->data['model_slug'] = $model_slug;

@@ -94,6 +94,8 @@
     <script src="<?php $this->baseUrl() ?>assets/admin/sb-admin-2/js/demo/datatables-demo.js"></script>
 
     <?php $this->render('common/admin/tinymce') ?>
+    <?php $this->render('common/admin/keep_alive') ?>
+
 
 </body>
 
