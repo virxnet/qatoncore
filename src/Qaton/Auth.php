@@ -116,6 +116,15 @@ final class Auth
         }
 
         $instance->db = Db::init($instance->config);
+
+        
+        if ($instance->db->table_is_empty($instance->config['APP_AUTH']['USERS_TABLE']) === true) {
+            $auth = new Auth();
+            $auth->install();
+        }
+
+
+
         $instance->db->table($instance->config['APP_AUTH']['USERS_TABLE']);
         $user = $instance->db->select('*')
                             ->where('username', $request->post['username'])

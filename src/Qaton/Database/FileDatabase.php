@@ -105,6 +105,7 @@ class FileDatabase
                                     'TABLE_DATA_NOT_EXISTS' => 'table data directory does not exist',
                                     'TABLE_DATA_EXISTS' => 'table data directory already exists, you may have a corrupted schema',
                                     'TABLE_META_NOT_EXISTS' => 'table meta file does not exist',
+                                    'TABLE_META_MISSING' => 'table meta data missing',
                                     'USER_REQUIRED_PROP' => 'table column property is required',
                                     'FOREIGN_PROP_MISSING_KEY' => 'table column foreign property requires a key',
                                     'FOREIGN_PROP_MISSING_TABLE_REF' => 'table column foreign property requires a foreigh table reference',
@@ -161,6 +162,7 @@ class FileDatabase
     public $chown_user;
     public $chown_group;
     public $human_friendly = true;
+    public $auto_create_schema_tables = true;
 
     public function __construct()
     {
@@ -883,6 +885,29 @@ class FileDatabase
 
     }
 
+    public function table_exists(string $table)
+    {
+        $table = $this->table($table);
+        if (file_exists($table->meta_file)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function table_is_empty(string $table)
+    {
+        if ($this->table_exists($table)) {
+            if (empty($this->get())) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return true;
+        }
+    }
+
     public function table(string $table)
     {
         $this->_log(__METHOD__, $table);
@@ -1020,13 +1045,34 @@ class FileDatabase
     {
         $this->_log(__METHOD__, $this->meta_file);
         if (!isset($this->schema[self::SCHEMA_TABLES][$this->table])) {
-            $this->_error_fatal(self::ERRORS['TABLE_NOT_EXISTS'], $this->table);
+            if ($this->auto_create_schema_tables === true) {
+                $this->_error(self::ERRORS['TABLE_NOT_EXISTS'], $this->table);
+                $this->_create_table_meta();
+            } else {
+                $this->_error_fatal(self::ERRORS['TABLE_NOT_EXISTS'], $this->table);
+            }
+            
         }
         if (!file_exists($this->meta_file)) {
-            $this->_error(self::ERRORS['TABLE_META_NOT_EXISTS'], $this->meta_file);
-            return false;
+            if ($this->auto_create_schema_tables === true) {
+                $this->_error(self::ERRORS['TABLE_META_NOT_EXISTS'], $this->meta_file);
+                $this->_create_table_meta();
+            } else {
+                $this->_error_fatal(self::ERRORS['TABLE_NOT_EXISTS'], $this->table);
+            }
         }
-        return $this->_read_json_file($this->meta_file);
+        $meta = $this->_read_json_file($this->meta_file);
+        if ($meta === false) {
+            if ($this->auto_create_schema_tables === true) {
+                $this->_error(self::ERRORS['TABLE_META_MISSING'], $this->meta_file);
+                $this->create($this->schema[self::SCHEMA_TABLES][$this->table]);
+                $meta = $this->_read_json_file($this->meta_file);
+            } else {
+                $this->_error_fatal(self::ERRORS['TABLE_META_MISSING'], $this->meta_file);
+            }
+        }
+        
+        return $meta;
     }
 
     private function _create_table_dir()
@@ -1080,6 +1126,9 @@ class FileDatabase
         $this->_log(__METHOD__, $database);
         $this->database_dir = $database;
         $this->database_schema_file = $this->database_dir . DIRECTORY_SEPARATOR . self::SCHEMA_FILENAME;
+        if (!is_writable($this->database_dir)) {
+            $this->_error_fatal(self::ERRORS['DB_NOT_WRITABLE'], $this->database_dir);
+        }
         if (!is_dir($this->database_dir)) {
             $this->_create_database($this->database_dir);
         }
