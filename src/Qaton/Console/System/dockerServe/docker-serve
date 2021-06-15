@@ -1,0 +1,27 @@
+#!/bin/bash
+
+docker info > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Fatal Error: Unable to detect Docker!"
+    exit 1
+fi
+
+echo
+echo " *** Serve Application *** "
+echo
+if [ -z ${1} ]; then
+    echo -n " - HTTP PORT: "; read HTTP_PORT;
+else
+    HTTP_PORT=$1
+fi
+
+echo $?
+if docker run -p $HTTP_PORT:80 -d --rm -v $(pwd):/var/www/ virxnet/qaton; then
+    echo
+    echo "Serving: http://localhost:$HTTP_PORT/"
+    echo
+else 
+    echo
+    echo "Error: failed to serve application!"
+    echo
+fi

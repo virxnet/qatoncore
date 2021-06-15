@@ -31,6 +31,21 @@ class System extends Console
         var_dump($this->config);
     }
 
+    public function dockerServe()
+    {
+        if (isset($this->options['install'])) {
+            Console::output('Installing Docker Serve...');
+
+            $source = __DIR__ . DIRECTORY_SEPARATOR . 'System' . DIRECTORY_SEPARATOR
+                        . 'dockerServe' . DIRECTORY_SEPARATOR . 'docker-serve';
+
+            @symlink($source, $this->config['BASE_PATH'] . DIRECTORY_SEPARATOR . 'docker-serve');
+            @chmod($source, 0755);
+
+            Console::output('Installing Docker Serve Completed! Try: bash docker-serve or ./docker-serve', 2, 2);
+        }
+    }
+
     public function rebuildPaths()
     {
         Console::output('Rebuilding Paths...');
