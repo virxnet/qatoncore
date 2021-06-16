@@ -29,7 +29,7 @@ final class System
      *
      * @var string
      */
-    public const VERSION = '1.1.9';
+    public const VERSION = '1.1.10';
 
     /**
      * Framework Package Release Date
