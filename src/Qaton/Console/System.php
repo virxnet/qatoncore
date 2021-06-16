@@ -31,18 +31,21 @@ class System extends Console
         var_dump($this->config);
     }
 
-    public function dockerServe()
+    public function qatonHelper()
     {
         if (isset($this->options['install'])) {
-            Console::output('Installing Docker Serve...');
+            Console::output('Installing Qaton Helper...');
 
             $source = __DIR__ . DIRECTORY_SEPARATOR . 'System' . DIRECTORY_SEPARATOR
-                        . 'dockerServe' . DIRECTORY_SEPARATOR . 'docker-serve';
+                        . 'qatonHelper' . DIRECTORY_SEPARATOR . 'qaton';
 
-            @symlink($source, $this->config['BASE_PATH'] . DIRECTORY_SEPARATOR . 'docker-serve');
+            $target = $this->config['BASE_PATH'] . DIRECTORY_SEPARATOR . 'qaton';
+
+            @unlink($target);
+            @symlink($source, $target);
             @chmod($source, 0755);
 
-            Console::output('Installing Docker Serve Completed! Try: bash docker-serve or ./docker-serve', 2, 2);
+            Console::output('Installing Docker Serve Completed! Try: "bash qaton start" or "./qaton qaton start"', 2, 2);
         }
     }
 

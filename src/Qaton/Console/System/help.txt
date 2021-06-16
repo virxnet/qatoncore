@@ -13,6 +13,35 @@ rebuildPaths
 
     Create all the application paths using applicaton configuration
 
+qatonHelper
+
+    With qatonHelper, you can easily get started with development by running
+    the application inside a Docker container. When installed yon run it at
+    the root directory of the project. To start using this feature quckly, try:
+
+        ./qaton start
+
+    That will serve the application at http://localhost:8888. You can also
+    specify a custom port:
+
+        ./qaton serve 8080
+
+    See the usage help information by typing:
+
+        ./qaton help
+
+    To start using this feature quckly, try:
+
+        ./qaton serve
+
+    That will serve the application at http://localhost:8888. You can also
+    specify a custom port:
+
+        ./qaton serve 8080
+
+    --install
+    Install the ./qaton script to easily serve Qaton applications with docker.
+
 adminPanel
 
     Manage the admin control panel
