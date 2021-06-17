@@ -36,16 +36,18 @@ class System extends Console
         if (isset($this->options['install'])) {
             Console::output('Installing Qaton Helper...');
 
-            $source = __DIR__ . DIRECTORY_SEPARATOR . 'System' . DIRECTORY_SEPARATOR
-                        . 'qatonHelper' . DIRECTORY_SEPARATOR . 'qaton';
+            $qaton_src_url = 'https://raw.githubusercontent.com/aspvirx/qatonapp/master/qaton';
+            $qaton_env_src_url = 'https://raw.githubusercontent.com/aspvirx/qatonapp/master/qaton.env';
 
             $target = $this->config['BASE_PATH'] . DIRECTORY_SEPARATOR . 'qaton';
 
             @unlink($target);
-            @symlink($source, $target);
-            @chmod($source, 0755);
+            @unlink($target.'.env');
+            file_put_contents($target, file_get_contents($qaton_src_url));
+            file_put_contents($target.'.env', file_get_contents($qaton_env_src_url));
+            @chmod($target, 0755);
 
-            Console::output('Installing Docker Serve Completed! Try: "bash qaton start" or "./qaton qaton start"', 2, 2);
+            Console::output('Installing Qaton Helper Completed! Try: "bash qaton start" or "./qaton start"', 2, 2);
         }
     }
 
