@@ -1126,7 +1126,7 @@ class FileDatabase
         $this->_log(__METHOD__, $database);
         $this->database_dir = $database;
         $this->database_schema_file = $this->database_dir . DIRECTORY_SEPARATOR . self::SCHEMA_FILENAME;
-        if (!is_writable($this->database_dir)) {
+        if (!is_writable(dirname($this->database_dir))) {
             $this->_error_fatal(self::ERRORS['DB_NOT_WRITABLE'], $this->database_dir);
         }
         if (!is_dir($this->database_dir)) {

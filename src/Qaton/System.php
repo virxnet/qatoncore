@@ -29,14 +29,14 @@ final class System
      *
      * @var string
      */
-    public const VERSION = '1.1.12';
+    public const VERSION = '1.1.13';
 
     /**
      * Framework Package Release Date
      *
      * @var string
      */
-    public const RELEASE_DATE = '2021-06-16';
+    public const RELEASE_DATE = '2021-06-17';
 
     /**
      * Framework Package Author
