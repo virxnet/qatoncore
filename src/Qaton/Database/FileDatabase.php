@@ -3,24 +3,25 @@
 namespace VirX\Qaton\Database;
 
 use VirX\Qaton\Error;
+use VirX\Qaton\Request;
 
 class FileDatabase
 {
 
-    public const CLASS_NAME        = "VirX Qaton FileDatabase";
-    public const CLASS_VERSION     = "1.0.0";
-    public const AUTHOR            = "Antony Shan Peiris <asp@virx.net>";
-    public const WEBSITE           = "http://qaton.virx.net";
+    public const CLASS_NAME         = "VirX Qaton FileDatabase";
+    public const CLASS_VERSION      = "1.1.0";
+    public const AUTHOR             = "Antony Shan Peiris <asp@virx.net>";
+    public const WEBSITE            = "http://qaton.virx.net";
 
-    public const SCHEMA_IDENTITY   = 'identity';
-    public const SCHEMA_AUTHOR     = 'author';
-    public const SCHEMA_WEBSITE    = 'website';
-    public const SCHEMA_CREATED    = 'created_on';
-    public const SCHEMA_UPDATED    = 'updated_on';
-    public const SCHEMA_VERSION    = 'version';
-    public const SCHEMA_TABLES     = 'tables';
-    public const SUFFIX_HUMAN      = '_text';
-    public const SCHEMA_HEADER     =   [
+    public const SCHEMA_IDENTITY    = 'identity';
+    public const SCHEMA_AUTHOR      = 'author';
+    public const SCHEMA_WEBSITE     = 'website';
+    public const SCHEMA_CREATED     = 'created_on';
+    public const SCHEMA_UPDATED     = 'updated_on';
+    public const SCHEMA_VERSION     = 'version';
+    public const SCHEMA_TABLES      = 'tables';
+    public const SUFFIX_HUMAN       = '_text';
+    public const SCHEMA_HEADER      =   [
                                     self::SCHEMA_IDENTITY => self::CLASS_NAME,
                                     self::SCHEMA_AUTHOR => self::AUTHOR,
                                     self::SCHEMA_WEBSITE => self::WEBSITE,
@@ -30,20 +31,20 @@ class FileDatabase
                                     self::SCHEMA_UPDATED => null,
                                     self::SCHEMA_UPDATED . self::SUFFIX_HUMAN => null,
                                     self::SCHEMA_TABLES => []
-                                ];
+                                    ];
 
-    public const META_TABLE        = 'table';
-    public const META_INDEX        = 'index';
-    public const AUTO_INCREMENT    = 'auto_increment';
+    public const META_TABLE         = 'table';
+    public const META_INDEX         = 'index';
+    public const AUTO_INCREMENT     = 'auto_increment';
 
-    public const TEXT_EXT          = '.txt';
-    public const JSON_EXT          = '.json';
-    public const LOG_EXT           = '.log';
-    public const TEXT_VAL          = '~txt';
-    public const MASKED_VAL        = '********';
-    public const DATA_DIR_SUFFIX   = '-data';
-    public const WILDCARD          = '*';
-    public const HASH_CONFIG       = [
+    public const TEXT_EXT           = '.txt';
+    public const JSON_EXT           = '.json';
+    public const LOG_EXT            = '.log';
+    public const TEXT_VAL           = '~txt';
+    public const MASKED_VAL         = '********';
+    public const DATA_DIR_SUFFIX    = '-data';
+    public const WILDCARD           = '*';
+    public const HASH_CONFIG        = [
                                     'RAND_START' => 1000000000000000,
                                     'RAND_END' => 9999999999999999,
                                     'USE_UNIXTIME' => true,
@@ -51,7 +52,7 @@ class FileDatabase
                                     'ALGO' => 'PASSWORD_BCRYPT'
                                     ];
 
-    public const WHERE_OPERATORS   =   [
+    public const WHERE_OPERATORS    =   [
                                     '=',
                                     '==',
                                     '!=',
@@ -60,39 +61,58 @@ class FileDatabase
                                     '>=',
                                     '<=',
                                     'like'
-                                ];
+                                    ];
 
-    public const META_FILENAME     = 'meta' . self::JSON_EXT;
-    public const SCHEMA_FILENAME   = 'schema' . self::JSON_EXT;
-    public const LOG_FILENAME      = 'log' . self::LOG_EXT;
+    public const META_FILENAME      = 'meta' . self::JSON_EXT;
+    public const SCHEMA_FILENAME    = 'schema' . self::JSON_EXT;
+    public const LOG_FILENAME       = 'log' . self::LOG_EXT;
 
-    public const COL_ID            = 'id';
-    public const COL_CREATED       = 'created_on';
-    public const COL_UPDATED       = 'updated_on';
-    public const COL_DELETED       = 'deleted_on';
+    public const COL_ID             = 'id';
+    public const COL_CREATED        = 'created_on';
+    public const COL_UPDATED        = 'updated_on';
+    public const COL_DELETED        = 'deleted_on';
 
-    public const TYPE_STRING       = 'string';
-    public const TYPE_INTEGER      = 'integer';
-    public const TYPE_INT          = 'int';
-    public const TYPE_FLOAT        = 'float';
-    public const TYPE_DOUBLE       = 'double';
-    public const TYPE_TEXT         = 'text';
-    public const TYPE_TIMESTAMP    = 'timestamp';
-    public const TYPE_FOREIGN      = 'foreign';
-    public const TYPE_MASKED       = 'masked';
-    public const TYPE_HASHED       = 'hashed';
+    public const TYPE_STRING        = 'string';
+    public const TYPE_INTEGER       = 'integer';
+    public const TYPE_INT           = 'int';
+    public const TYPE_FLOAT         = 'float';
+    public const TYPE_DOUBLE        = 'double';
+    public const TYPE_TEXT          = 'text';
+    public const TYPE_TIMESTAMP     = 'timestamp';
+    public const TYPE_FOREIGN       = 'foreign';
+    public const TYPE_MASKED        = 'masked';
+    public const TYPE_HASHED        = 'hashed';
 
-    public const PROP_TYPE         = 'type';
-    public const PROP_KEY          = 'key';
-    public const PROP_NULL         = 'null';
-    public const PROP_FOREIGN      = 'foreign';
-    public const PROP_DEFAULT      = 'default';
-    public const PROP_UNIQUE       = 'unique';
+    public const PROP_TYPE          = 'type';
+    public const PROP_KEY           = 'key';
+    public const PROP_NULL          = 'null';
+    public const PROP_FOREIGN       = 'foreign';
+    public const PROP_DEFAULT       = 'default';
+    public const PROP_UNIQUE        = 'unique';
 
+    public const OPTION_TIMESTAMPS  = 'timestamps';
 
-    public const OPTION_TIMESTAMPS = 'timestamps';
+    public const PAGINATE_TABLE     = 'table';
+    public const PAGINATE_KEY       = 'key';
+    public const PAGINATE_LIMIT     = 'limit';
+    public const PAGINATE_OFFSET    = 'offset';
+    public const PAGINATE_PAGES     = 'pages';
+    public const PAGINATE_COUNT     = 'count';
+    public const PAGINATE_PREV      = 'prev';
+    public const PAGINATE_NEXT      = 'next';
+    public const PAGINATE_TOTAL     = 'total_pages';
+    public const PAGINATE_CURRENT   = 'current_page';
+    public const PAGINATE_BACKWARD  = 'pages_backward';
+    public const PAGINATE_FORWARD   = 'pages_forward';
+    public const PAGINATE_REQ_FIRST = 'request_first';
+    public const PAGINATE_REQ_PREV  = 'request_prev';
+    public const PAGINATE_REQ_NEXT  = 'request_next';
+    public const PAGINATE_REQ_LAST  = 'request_last';
+    public const PAGINATE_REQ_PAGES = 'request_pages';
+    public const PAGINATE_DATA      = 'data';
+    
 
-    public const ERRORS            =   [
+    public const ERRORS             =   [
                                     'DB_NOT_WRITABLE' => 'database does not exist and not writable',
                                     'FILE_NOT_WRITABLE' => 'unable to write file',
                                     'DIR_NOT_CREATABLE' => 'unable to create directory',
@@ -119,9 +139,9 @@ class FileDatabase
                                     'NON_NUMERIC_COMPARISON' => 'where clause tryting to compare non numeric values',
                                     'REQUIRED_DATA_MISSING' => 'required column missing data, null not allowed',
                                     'UNIQUE_CONSTRAINT_VOLIATION' => 'violation of unique data constraint'
-                                ];
+                                    ];
 
-    public const DB_TIMESTAMP_FMT  = 'Y-m-d h:i:s';
+    public const DB_TIMESTAMP_FMT   = 'Y-m-d h:i:s';
 
     private $database_dir;
     private $database_schema_file;
@@ -136,6 +156,7 @@ class FileDatabase
 
     private $limit;
     private $offset;
+    private $pages;
     private $selects = array();
     private $foreigners = array();
     private $pivot_tables = array();
@@ -163,6 +184,11 @@ class FileDatabase
     public $chown_group;
     public $human_friendly = true;
     public $auto_create_schema_tables = true;
+    public $paginate_default_limit = 10;
+    public $paginate_default_pages = 4;
+    public $manage_from_offset_prefix = 'page';
+    public $manage_from_offset_suffix = 'from';
+    
 
     public function __construct()
     {
@@ -200,6 +226,13 @@ class FileDatabase
     {
         $this->_log(__METHOD__, $limit);
         $this->limit = $limit;
+        return $this;
+    }
+
+    public function pages(int $pages)
+    {
+        $this->_log(__METHOD__, $pages);
+        $this->pages = $pages;
         return $this;
     }
 
@@ -354,8 +387,17 @@ class FileDatabase
             $this->offset = 1;
         }
 
+        $serial_index = array_keys($this->meta[self::META_INDEX], 1);
+        array_unshift($serial_index, null);
+
         for ($i = $this->offset; $i <= ($this->offset + $this->limit) - 1; $i++) {
-            $this->_set_row($i);
+            
+            if (isset($serial_index[$i])) {
+                $this->_set_row($serial_index[$i]);
+            } else {
+                continue;
+            }
+            
 
             // TODO: this is inefficient and needs to be optimized, it's getting all rows even with where clauses
             if (file_exists($this->row_data_file)) {
@@ -365,7 +407,10 @@ class FileDatabase
             }
 
             if (isset($item[self::COL_ID])) {
-                if (isset($this->meta[self::META_INDEX][$item[self::COL_ID]]) && $this->meta[self::META_INDEX][$item[self::COL_ID]] === 1) {
+                if (isset($this->meta[self::META_INDEX][$item[self::COL_ID]])) {
+                    if ($this->meta[self::META_INDEX][$item[self::COL_ID]] !== 1) {
+                        continue;
+                    }
                     if (!empty($this->selects)) {
                         $select_filtered = array();
 
@@ -906,6 +951,108 @@ class FileDatabase
         } else {
             return true;
         }
+    }
+
+    public function count_rows()
+    {
+        return $this->count_all_rows()[1];
+    }
+
+    public function count_all_rows()
+    {
+        $this->meta = $this->_get_table_meta();
+        if (isset($this->meta[self::META_INDEX]) 
+            && is_array($this->meta[self::META_INDEX]) 
+            && !empty($this->meta[self::META_INDEX])
+        ) {
+            return array_count_values($this->meta[self::META_INDEX]);
+        } else {
+            return 0;
+        }
+    }
+
+    public function paginate(bool $manage_request_offset=false)
+    {
+        $data = [];
+        $data[self::PAGINATE_TABLE] = $this->table;
+        if ($manage_request_offset === true) {
+            $request = new Request;
+            $request_key = $this->manage_from_offset_prefix . 
+                            '_' .  $this->table . 
+                            '_' .  $this->manage_from_offset_suffix;
+            $data[self::PAGINATE_KEY] = $request_key;
+            if (isset($request->get[$request_key])) {
+                $this->offset = $request->get[$request_key];
+            }
+        }
+        if (!is_numeric($this->limit) || (is_numeric($this->limit) && $this->limit <= 0)) {
+            $this->limit = $this->paginate_default_limit;
+        }
+        if (!is_numeric($this->offset) || (is_numeric($this->offset) && $this->offset < 0)) {
+            $this->offset = 1;
+        }
+        if (!is_numeric($this->pages) || (is_numeric($this->pages) && $this->pages < 2)) {
+            $this->pages = $this->paginate_default_pages;
+        }
+        $data[self::PAGINATE_LIMIT] = $this->limit;
+        $data[self::PAGINATE_OFFSET] = $this->offset;
+        $data[self::PAGINATE_PAGES] = $this->pages;
+        $data[self::PAGINATE_COUNT] = $this->count_rows();
+        $data[self::PAGINATE_PREV] = $this->offset - $this->limit;
+        if ($data[self::PAGINATE_PREV] < 0) {
+            $data[self::PAGINATE_PREV] = 1;
+        }
+        $data[self::PAGINATE_NEXT] = $this->offset + $this->limit;
+        if ($data[self::PAGINATE_NEXT] > $data[self::PAGINATE_COUNT]) {
+            $data[self::PAGINATE_NEXT] = $this->offset;
+        }
+        $data[self::PAGINATE_PAGES] = [];
+        $data[self::PAGINATE_TOTAL] = (int)ceil($data[self::PAGINATE_COUNT] / $this->limit);
+        $data[self::PAGINATE_CURRENT] = (int)ceil($this->offset / $this->limit);
+        if ($data[self::PAGINATE_CURRENT] >= 1 && $data[self::PAGINATE_CURRENT] <= $data[self::PAGINATE_TOTAL]) {
+            $data[self::PAGINATE_BACKWARD] = (int)floor($this->offset / $this->limit);
+            $data[self::PAGINATE_FORWARD] = (int)floor($data[self::PAGINATE_TOTAL] - $data[self::PAGINATE_BACKWARD] - 1);
+            $data[self::PAGINATE_PAGES][$data[self::PAGINATE_CURRENT]] = $this->offset - $this->limit;
+            
+            for (
+                $i=$data[self::PAGINATE_CURRENT]-1; 
+                (
+                    ($i < $this->pages 
+                    && $i < $data[self::PAGINATE_TOTAL])
+                    || 
+                    ($i < ($data[self::PAGINATE_CURRENT] + $this->pages - 1)
+                    && $i < $data[self::PAGINATE_TOTAL])
+                ); 
+                $i++
+            ) {
+                $data[self::PAGINATE_PAGES][$i+1] = end($data[self::PAGINATE_PAGES]) + $this->limit;
+            }
+            $shift = $this->limit;
+            for (
+                $i=($data[self::PAGINATE_CURRENT]-1);
+                (
+                    ($i > 0
+                    && count($data[self::PAGINATE_PAGES]) < $this->pages)
+                );
+                $i--
+            ) {
+                $data[self::PAGINATE_PAGES][$i] = $data[self::PAGINATE_PAGES][$data[self::PAGINATE_CURRENT]] - $shift;
+                $shift += $this->limit;
+            }
+            ksort($data[self::PAGINATE_PAGES]);
+        }
+        if ($manage_request_offset === true) {
+            $data[self::PAGINATE_REQ_FIRST] = "?{$request_key}=1";
+            $data[self::PAGINATE_REQ_PREV] = "?{$request_key}=" . $data[self::PAGINATE_PREV];
+            $data[self::PAGINATE_REQ_NEXT] = "?{$request_key}=" . $data[self::PAGINATE_NEXT];
+            $data[self::PAGINATE_REQ_LAST] = "?{$request_key}=" . $data[self::PAGINATE_COUNT];
+            $data[self::PAGINATE_REQ_PAGES] = [];
+            foreach ($data[self::PAGINATE_PAGES] as $page_number => $offset) {
+                $data[self::PAGINATE_REQ_PAGES][$page_number] = "?{$request_key}={$offset}";
+            }
+        }
+        $data[self::PAGINATE_DATA] = $this->get();
+        return $data;
     }
 
     public function table(string $table)

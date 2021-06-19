@@ -154,4 +154,35 @@ class FileDatabaseModel
     {
         return $this->table;
     }
+
+    public function table_exists(String $table)
+    {
+        return $this->table_exists($table);
+    }
+
+    public function table_is_empty(string $table)
+    {
+        return $this->table_is_empty($table);
+    }
+
+    public function count_rows()
+    {
+        return $this->db->count_rows();
+    }
+
+    public function count_all_rows()
+    {
+        return $this->db->count_all_rows();
+    }
+
+    public function paginate(bool $manage_request_offset)
+    {
+        return $this->db->paginate($manage_request_offset);
+    }
+
+    public function pages(int $pages)
+    {
+        $this->db->pages($pages);
+        return $this;
+    }
 }
