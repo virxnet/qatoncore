@@ -9,7 +9,7 @@ class FileDatabase
 {
 
     public const CLASS_NAME         = "VirX Qaton FileDatabase";
-    public const CLASS_VERSION      = "1.1.0";
+    public const CLASS_VERSION      = "1.2.0";
     public const AUTHOR             = "Antony Shan Peiris <asp@virx.net>";
     public const WEBSITE            = "http://qaton.virx.net";
 
@@ -43,6 +43,7 @@ class FileDatabase
     public const TEXT_VAL           = '~txt';
     public const MASKED_VAL         = '********';
     public const DATA_DIR_SUFFIX    = '-data';
+    public const SEARCH_INDEX_DIR   = '_sindex';
     public const WILDCARD           = '*';
     public const HASH_CONFIG        = [
                                     'RAND_START' => 1000000000000000,
@@ -51,6 +52,7 @@ class FileDatabase
                                     'COST' => 12,
                                     'ALGO' => 'PASSWORD_BCRYPT'
                                     ];
+    public const SEARCH_FILTER      = '/[^ \w-]/';
 
     public const WHERE_OPERATORS    =   [
                                     '=',
@@ -66,6 +68,7 @@ class FileDatabase
     public const META_FILENAME      = 'meta' . self::JSON_EXT;
     public const SCHEMA_FILENAME    = 'schema' . self::JSON_EXT;
     public const LOG_FILENAME       = 'log' . self::LOG_EXT;
+    public const SINDEX_FILENAME    = 'keys' . self::JSON_EXT;
 
     public const COL_ID             = 'id';
     public const COL_CREATED        = 'created_on';
@@ -78,6 +81,8 @@ class FileDatabase
     public const TYPE_FLOAT         = 'float';
     public const TYPE_DOUBLE        = 'double';
     public const TYPE_TEXT          = 'text';
+    public const TYPE_HTML          = 'html';
+    public const TYPE_MD            = 'markdown';
     public const TYPE_TIMESTAMP     = 'timestamp';
     public const TYPE_FOREIGN       = 'foreign';
     public const TYPE_MASKED        = 'masked';
@@ -89,6 +94,8 @@ class FileDatabase
     public const PROP_FOREIGN       = 'foreign';
     public const PROP_DEFAULT       = 'default';
     public const PROP_UNIQUE        = 'unique';
+    public const PROP_SEARCHABLE    = 'searchable';
+    public const PROP_LABEL         = 'label';
 
     public const OPTION_TIMESTAMPS  = 'timestamps';
 
@@ -153,6 +160,7 @@ class FileDatabase
     private $row_data_dir;
     private $meta;
     private $meta_file;
+    private $search_index_dir;
 
     private $limit;
     private $offset;
@@ -188,6 +196,7 @@ class FileDatabase
     public $paginate_default_pages = 4;
     public $manage_from_offset_prefix = 'page';
     public $manage_from_offset_suffix = 'from';
+    public $searchable_by_default = true;
     
 
     public function __construct()
@@ -387,8 +396,10 @@ class FileDatabase
             $this->offset = 1;
         }
 
-        $serial_index = array_keys($this->meta[self::META_INDEX], 1);
-        array_unshift($serial_index, null);
+        if (isset($this->meta[self::META_INDEX])) {
+            $serial_index = array_keys($this->meta[self::META_INDEX], 1);
+            array_unshift($serial_index, null);
+        }
 
         for ($i = $this->offset; $i <= ($this->offset + $this->limit) - 1; $i++) {
             
@@ -502,6 +513,8 @@ class FileDatabase
                     foreach ($this->table_schema as $col => $props) {
                         switch ($props[self::PROP_TYPE]) {
                             case self::TYPE_TEXT:
+                            case self::TYPE_HTML:
+                            case self::TYPE_MD:
                                 if (isset($where_filtered[$col])) {
                                     $where_filtered[$col] = $this->_read_file($this->row_data_dir
                                                                     . DIRECTORY_SEPARATOR . $col . self::TEXT_EXT);
@@ -610,9 +623,12 @@ class FileDatabase
 
         }
 
+        $result = $this->result; // TODO: this is a temp bug fix to prevent duplicate results when running multiple get()
+        $this->table($this->table); // ... but this is not a great long term solution, find a better 
+                                    // ... way to fix and do not copy the results like this to prevent memory doubling
         $this->_reset_state();
 
-        return $this->result;
+        return $result;
     }
 
     public function clone()
@@ -742,7 +758,8 @@ class FileDatabase
             self::PROP_NULL,
             self::PROP_DEFAULT,
             self::PROP_FOREIGN,
-            self::PROP_KEY
+            self::PROP_KEY,
+            self::PROP_SEARCHABLE
         ];
 
         foreach ($columns as $column_name => $column) {
@@ -770,7 +787,9 @@ class FileDatabase
                 }
 
                 switch ($optional_table_column_property) {
-                    // TODO: Process optional properties that require processing
+                    case self::PROP_SEARCHABLE:
+                        $this->_col_create_search_index($column_name, $column);
+                        break;
                 }
             }
         }
@@ -815,7 +834,25 @@ class FileDatabase
                 // TODO: use _process_insert_value after renaming it so there isn't duplication and
                 //       the logic is consistent?
                 foreach ($this->table_schema as $col => $props) {
+
+                    // TODO: improve this (redundant and messy) -- see also the same for _process_insert_value()
+                    if ($this->table_schema[$col]['type'] != self::TYPE_TEXT
+                        && $this->table_schema[$col]['type'] != self::TYPE_STRING
+                        && $this->table_schema[$col]['type'] != self::TYPE_MD
+                        && $this->table_schema[$col]['type'] != self::TYPE_HTML
+                    ) {
+                        $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE] = false;
+                    }
+
+                    // TODO: improve this (redundant and messy) -- see also the same for _process_insert_value()
+                    if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
+                        $this->_reset_search_index($col, $record[self::COL_ID], $records[$index][$col], $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
+                    } else {
+                        $this->_reset_search_index($col, $record[self::COL_ID], $records[$index][$col], null);
+                    }
+
                     if (isset($data[$col])) {
+
                         switch ($this->table_schema[$col]['type']) {
                             case self::TYPE_INTEGER:
                             case self::TYPE_INT:
@@ -848,6 +885,14 @@ class FileDatabase
                                 $records[$index][$col] = $data[$col];
                         }
                     }
+
+                    // TODO: improve this (redundant and messy) -- see also the same for _process_insert_value()
+                    if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
+                        $this->_update_search_index($col, $record[self::COL_ID], $records[$index][$col], $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
+                    } else {
+                        $this->_update_search_index($col, $record[self::COL_ID], $records[$index][$col], null);
+                    }
+                    
                 }
 
                 if (isset($records[$index][self::SCHEMA_UPDATED])) {
@@ -1055,6 +1100,36 @@ class FileDatabase
         return $data;
     }
 
+    public function search(string $words, string $column_name)
+    {
+        $this->_set_search_index_dir($column_name);
+        $words = preg_replace(self::SEARCH_FILTER, '', $words);
+        $words = explode(' ', $words);
+        $results = [];
+        foreach ($words as $word) {
+            $letters = str_split($word);
+            $ls = $this->search_index_dir . DIRECTORY_SEPARATOR;
+            $test = $ls . implode(DIRECTORY_SEPARATOR, $letters) 
+                    . DIRECTORY_SEPARATOR 
+                    . self::SINDEX_FILENAME;
+            if (is_readable($test)) {
+                $match = array_keys($this->_read_json_file($test));
+                $results = array_merge($results, $match); // TODO: ignoring counts at the moment, add later
+            }
+        }
+
+        // TODO: fix offset(), limit() and paginate() based issues
+        if (empty($results)) {
+            // TODO: this is somewhat of a hack, find a better way later
+            //       ... but without this, it will return all results 
+            $this->select(self::COL_ID)->where(self::COL_ID, -1);
+        } else {
+            $this->select(self::COL_ID)->where(self::COL_ID, $results);
+        }
+        
+        return $this;
+    }
+
     public function table(string $table)
     {
         $this->_log(__METHOD__, $table);
@@ -1077,6 +1152,24 @@ class FileDatabase
         return $this->errors;
     }
 
+    private function _set_search_index_dir($column_name)
+    {
+        $this->search_index_dir = $this->table_dir . DIRECTORY_SEPARATOR 
+                                    . self::SEARCH_INDEX_DIR . DIRECTORY_SEPARATOR
+                                    .$column_name;
+    }
+
+    private function _col_create_search_index(string $column_name, array $column)
+    {
+        if (($this->searchable_by_default === true && $column[self::PROP_SEARCHABLE] != false)
+            || $column[self::PROP_SEARCHABLE] === true
+        ) {
+            $this->_set_search_index_dir($column_name);
+            $this->_log(__METHOD__, $column_name);
+            $this->_mkdir($this->search_index_dir);
+        }
+    }
+
     private function _set_row(int $id)
     {
         $this->row_data_dir = $this->table_dir . DIRECTORY_SEPARATOR . $id . self::DATA_DIR_SUFFIX;
@@ -1094,6 +1187,65 @@ class FileDatabase
         return $records;
     }
 
+    private function _reset_search_index_keys(string $dir, int $id)
+    {
+        if (!$keys = $this->_read_json_file($dir . self::SINDEX_FILENAME)) {
+            $keys = [];
+        }
+        if (isset($keys[$id])) {
+            unset($keys[$id]);
+        }
+        $this->_write_json_file($dir . self::SINDEX_FILENAME, $keys);
+    }
+
+    private function _reset_search_index(string $column_name, int $id, $words, $searchable)
+    {
+        if (($this->searchable_by_default === true && $searchable != false)
+            || $searchable === true
+        ) {
+            $this->_set_search_index_dir($column_name);
+            $words = preg_replace(self::SEARCH_FILTER, '', $words);
+            $words = explode(' ', $words);
+            foreach ($words as $word) {
+                $letters = str_split($word);
+                $ls = $this->search_index_dir . DIRECTORY_SEPARATOR;
+                $ls .= implode(DIRECTORY_SEPARATOR, $letters) . DIRECTORY_SEPARATOR;
+                $this->_reset_search_index_keys($ls, $id);
+            }
+        }
+    }
+
+    private function _update_search_index_keys(string $dir, int $id, int $count)
+    {
+        if (!$keys = $this->_read_json_file($dir . self::SINDEX_FILENAME)) {
+            $keys = [];
+        }
+        $keys[$id] = $count;
+        
+        $this->_write_json_file($dir . self::SINDEX_FILENAME, $keys);
+    }
+
+    private function _update_search_index(string $column_name, int $id, $words, $searchable)
+    {
+        if (($this->searchable_by_default === true && $searchable != false)
+            || $searchable === true
+        ) {
+            $this->_set_search_index_dir($column_name);
+            $words = preg_replace(self::SEARCH_FILTER, '', $words);
+            $words = explode(' ', $words);
+            $words = array_count_values($words);
+            foreach ($words as $word => $count) {
+                $letters = str_split($word);
+                $ls = $this->search_index_dir . DIRECTORY_SEPARATOR;
+                foreach($letters as $l) {
+                    $ls .= $l . DIRECTORY_SEPARATOR;
+                    $this->_mkdir($ls);
+                }
+                $this->_update_search_index_keys($ls, $id, $count);
+            }
+        }
+    }
+
     private function _process_insert_value(string $col, int $id, $value)
     {
         $this->_log(__METHOD__, ['col' => $col, 'id' => $id, 'value' => $value]);
@@ -1103,7 +1255,23 @@ class FileDatabase
         if (!isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_TYPE])) {
             $this->_error_fatal(self::ERRORS['UNDEFINED_DATA_TYPE'], $col);
         }
- 
+        
+        // TODO: improve this (redundant and messy) -- see also the same for update()
+        if ($this->table_schema[$col]['type'] != self::TYPE_TEXT
+            && $this->table_schema[$col]['type'] != self::TYPE_STRING
+            && $this->table_schema[$col]['type'] != self::TYPE_MD
+            && $this->table_schema[$col]['type'] != self::TYPE_HTML
+        ) {
+            $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE] = false;
+        }
+
+        // TODO: improve this (redundant and messy) - see also the same for update()
+        if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
+            $this->_update_search_index($col, $id, $value, $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
+        } else {
+            $this->_update_search_index($col, $id, $value, null);
+        }
+
         switch ($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_TYPE]) {
             case self::TYPE_STRING:
             case self::TYPE_MASKED:
@@ -1131,6 +1299,8 @@ class FileDatabase
             break;
 
             case self::TYPE_TEXT:
+            case self::TYPE_HTML:
+            case self::TYPE_MD:
                 $this->_mkdir($this->row_data_dir);
                 $file = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}" . self::TEXT_EXT;
                 $this->_write_file($file, $value);
@@ -1163,6 +1333,7 @@ class FileDatabase
             default:
                 $this->_error_fatal(self::ERRORS['UNKNOWN_DATA_TYPE'], ['table' => $this->table, 'column' => $col, 'value' => $value, 'schema' => $this->schema[self::SCHEMA_TABLES][$this->table][$col]]);
         }
+        
     }
 
     private function _reset_state()
@@ -1228,7 +1399,7 @@ class FileDatabase
         if (!is_dir($this->table_dir)) {
             $this->_mkdir($this->table_dir);
         } else {
-            $this->_error_fatal(self::ERRORS['TABLE_DATA_EXISTS'], $this->table_dir);
+            $this->_error(self::ERRORS['TABLE_DATA_EXISTS'], $this->table_dir);
         }
     }
 

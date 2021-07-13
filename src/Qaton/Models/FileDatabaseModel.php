@@ -185,4 +185,9 @@ class FileDatabaseModel
         $this->db->pages($pages);
         return $this;
     }
+
+    public function search(string $words, string $column_name)
+    {
+        return $this->db->search($words, $column_name);
+    }
 }
