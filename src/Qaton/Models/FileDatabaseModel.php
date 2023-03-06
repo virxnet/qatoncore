@@ -94,6 +94,12 @@ class FileDatabaseModel
         return $this;
     }
 
+    public function withFiles()
+    {
+        $this->db->withFiles();
+        return $this;
+    }
+
     public function explain()
     {
         return $this->db->explain();

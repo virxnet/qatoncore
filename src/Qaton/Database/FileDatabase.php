@@ -590,6 +590,8 @@ class FileDatabase
                             case self::TYPE_FILE:
                                 if (isset($where_filtered[$col]) && $this->with_files === true) {
                                     $where_filtered[$col] = '~FILE~';
+                                } else {
+                                    $where_filtered[$col] = "!FILE!";
                                 }
                                 break;
                         }
@@ -1338,7 +1340,8 @@ class FileDatabase
                 $this->_upload_file($col, $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}"  . self::FILE_NAME_EXT);
                 $meta = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}" . self::FILE_META;
                 $this->_write_file($meta, json_encode($_FILES[$col]));
-                break;
+                return true;
+            break;
 
             case self::TYPE_FOREIGN:
                 if (!isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_FOREIGN])) {
