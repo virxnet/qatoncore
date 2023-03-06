@@ -1,5 +1,5 @@
 <h4>Create</h4>
-<form method="post" action="<?php $this->baseUrl() ?>admin/panel/table/insert/<?php echo $model_slug ?>/0">
+<form method="post" enctype="multipart/form-data" action="<?php $this->baseUrl() ?>admin/panel/table/insert/<?php echo $model_slug ?>/0">
 <table class="table table-striped table-bordered table-hover">
     <?php foreach ($schema as $column => $properties) : ?>
         <tr>
@@ -44,6 +44,9 @@
                         break;
                     case 'text':
                         echo "<textarea class='form-control editor' type='text' name='{$column}'></textarea>";
+                        break;
+                    case 'file':
+                        echo "<input name='{$column}' type='file' />";
                         break;
                 }
                 echo "<small>";

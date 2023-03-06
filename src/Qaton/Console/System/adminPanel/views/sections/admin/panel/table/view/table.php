@@ -41,6 +41,9 @@
                             case 'hashed':
                                 echo "********";
                                 break;
+                            case 'file':
+                                echo "[FILE]";
+                                break;
                             default:
                                 echo $value;
                         }

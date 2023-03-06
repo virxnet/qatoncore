@@ -56,6 +56,8 @@
                                     echo "<td>" . date('Y-m-d h:i:s', $row[$column_name]) . "</td>";
                                 } elseif ($column_props['type'] == 'hashed') {
                                     echo "<td>********</td>";
+                                } elseif ($column_props['type'] == 'file') {
+                                    echo "<td>[FILE]</td>";
                                 } else {
                                     echo "<td>{$row[$column_name]}</td>";
                                 }

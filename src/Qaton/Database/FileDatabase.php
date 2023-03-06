@@ -38,6 +38,8 @@ class FileDatabase
     public const AUTO_INCREMENT     = 'auto_increment';
 
     public const TEXT_EXT           = '.txt';
+    public const FILE_NAME_EXT      = '.file.data';
+    public const FILE_META          = '.file.meta.json';
     public const JSON_EXT           = '.json';
     public const LOG_EXT            = '.log';
     public const TEXT_VAL           = '~txt';
@@ -87,6 +89,7 @@ class FileDatabase
     public const TYPE_FOREIGN       = 'foreign';
     public const TYPE_MASKED        = 'masked';
     public const TYPE_HASHED        = 'hashed';
+    public const TYPE_FILE          = 'file';
 
     public const PROP_TYPE          = 'type';
     public const PROP_KEY           = 'key';
@@ -96,6 +99,7 @@ class FileDatabase
     public const PROP_UNIQUE        = 'unique';
     public const PROP_SEARCHABLE    = 'searchable';
     public const PROP_LABEL         = 'label';
+    public const PROP_FILE_TYPES    = 'file_types';
 
     public const OPTION_TIMESTAMPS  = 'timestamps';
 
@@ -175,6 +179,7 @@ class FileDatabase
     private $masked = true;
     private $verify_unhashed_columns = array();
     private $with_hashed = false;
+    private $with_files = false;
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -356,6 +361,11 @@ class FileDatabase
         return $this;
     }
 
+    public function withFiles()
+    {
+        $this->with_files = true;
+        return $this;
+    }
 
     public function explain()
     {
@@ -563,19 +573,25 @@ class FileDatabase
                                 break;
 
                             case self::TYPE_HASHED:
-                                    if (isset($where_filtered[$col])) {
-                                        if (isset($this->verify_unhashed_columns[$col])) {
-                                            $where_filtered[$col] = $this->verifyEncodedHash(
-                                                $this->verify_unhashed_columns[$col],
-                                                $where_filtered[$col]
-                                            );
-                                        } else {
-                                            if ($this->with_hashed === false) {
-                                                $where_filtered[$col] = null;
-                                            }
+                                if (isset($where_filtered[$col])) {
+                                    if (isset($this->verify_unhashed_columns[$col])) {
+                                        $where_filtered[$col] = $this->verifyEncodedHash(
+                                            $this->verify_unhashed_columns[$col],
+                                            $where_filtered[$col]
+                                        );
+                                    } else {
+                                        if ($this->with_hashed === false) {
+                                            $where_filtered[$col] = null;
                                         }
                                     }
-                                    break;
+                                }
+                                break;
+
+                            case self::TYPE_FILE:
+                                if (isset($where_filtered[$col]) && $this->with_files === true) {
+                                    $where_filtered[$col] = '~FILE~';
+                                }
+                                break;
                         }
                     }
 
@@ -877,6 +893,16 @@ class FileDatabase
 
                             case self::TYPE_TIMESTAMP:
                                 $records[$index][$col] = (int)$data[$col];
+                                break;
+
+                            case self::TYPE_FILE:
+                                // TODO: optimize
+                                $file = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}"  . self::FILE_NAME_EXT;
+                                unlink($file);
+                                $this->_upload_file($col, $file);
+                                $meta = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}" . self::FILE_META;
+                                unlink($meta);
+                                $this->_write_file($meta, json_encode($_FILES[$col]));
                                 break;
 
                             // TODO: foreign intellignent type switch based on key > schema > type
@@ -1307,6 +1333,13 @@ class FileDatabase
                 return self::TEXT_VAL;
             break;
 
+            case self::TYPE_FILE:
+                $this->_mkdir($this->row_data_dir);
+                $this->_upload_file($col, $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}"  . self::FILE_NAME_EXT);
+                $meta = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}" . self::FILE_META;
+                $this->_write_file($meta, json_encode($_FILES[$col]));
+                break;
+
             case self::TYPE_FOREIGN:
                 if (!isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_FOREIGN])) {
                     $this->_error_fatal(self::ERRORS['UNDEFINED_PROPERTY_FOR_DATA_TYPE'], ['expected' => self::PROP_FOREIGN, 'table' => $this->table, 'column' => $col, 'value' => $value, 'schema' => $this->schema[self::SCHEMA_TABLES][$this->table][$col]]);
@@ -1473,6 +1506,50 @@ class FileDatabase
         return true;
     }
 
+    private function _get_uploaded_file_meta($file)
+    {
+        if (file_exists($file)) {
+            return $this->_read_json_file($file);
+        }
+        return false;
+    }
+
+    private function _get_uploaded_file($file, $name)
+    {
+        $meta = $this->_get_uploaded_file_meta($file);
+        if ($meta && isset($meta['name'])) {
+            $file_info = pathinfo($file);
+            if (false !== ($handler = fopen($file, 'r'))) {
+                header('Content-Description: File Transfer');
+                if (isset($meta['type'])) {
+                    header('Content-Type: ' . $meta['type']);
+                } else {
+                    header('Content-Type: application/octet-stream');
+                }
+                if (isset($file_info['extension'])) {
+                    header('Content-Disposition: attachment; filename=' . $name . '.' . $file_info['extension']);
+                } else {
+                    header('Content-Disposition: attachment; filename=' . $meta['name']);
+                }
+                header('Content-Transfer-Encoding: binary');
+                header('Expires: 0');
+                header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+                header('Pragma: public');
+                if (isset($meta['size'])) {
+                    header('Content-Length: ' . $meta['size']);
+                } else {
+                    header('Content-Length: ' . filesize($file));
+                }
+                while (false !== ($chunk = fread($handler,4096)))
+                {
+                    echo $chunk;
+                }
+            }
+            exit;
+        }
+        return null;
+    }
+
     private function _write_database(array $data)
     {
         $this->_log(__METHOD__, ['file' => $this->database_schema_file, 'data' => $data]);
@@ -1603,6 +1680,20 @@ class FileDatabase
         @chown($file, $this->chown_user);
         @chgrp($file, $this->chown_group);
         return true;
+    }
+
+    private function _upload_file(string $name, string $target_file)
+    {
+        $this->_log(__METHOD__, ['_FILE' => $_FILES, 'name' => $name, 'target_file' => $target_file]);
+        if (isset($_FILES[$name])) {
+            if (move_uploaded_file($_FILES[$name]['tmp_name'], $target_file)) {
+                // TODO: handler
+            } else {
+                // TODO: handler
+            }
+        } else {
+            // TODO: handler 
+        }
     }
 
     private function _read_file(string $file)

@@ -1,6 +1,6 @@
 
 <h4>Data</h4>
-<form method="post" action="<?php $this->baseUrl() ?>admin/panel/table/update/<?php echo $model_slug ?>/<?php echo $data['id'] ?>">
+<form method="post" enctype="multipart/form-data" action="<?php $this->baseUrl() ?>admin/panel/table/update/<?php echo $model_slug ?>/<?php echo $data['id'] ?>">
 <table class="table table-striped table-bordered table-hover ">
     <?php foreach ($data as $column => $value) : ?>
         <tr>
@@ -65,6 +65,9 @@
                                 break;
                             case 'text':
                                 echo "<textarea class='form-control editor' type='text' name='{$column}'>{$value}</textarea>";
+                                break;
+                            case 'file':
+                                echo "<input name='{$column}' type='file' />";
                                 break;
                             default:
                                 echo $value;
