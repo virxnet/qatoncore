@@ -21,7 +21,7 @@ final class Db
                         }
                         $db->load($config['APP_PATHS']['FILEDATABASE'] . $config['APP_DATABASE']['NAME']);
                         if (self::serveFiles($db)) {
-                            //exit;
+                            exit;
                         }
                         return $db;
                     }

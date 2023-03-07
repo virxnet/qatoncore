@@ -149,7 +149,8 @@ class FileDatabase
                                     'UNSUPPORTED_WHERE_OPERATOR' => 'unsupported where clause condition operator',
                                     'NON_NUMERIC_COMPARISON' => 'where clause tryting to compare non numeric values',
                                     'REQUIRED_DATA_MISSING' => 'required column missing data, null not allowed',
-                                    'UNIQUE_CONSTRAINT_VOLIATION' => 'violation of unique data constraint'
+                                    'UNIQUE_CONSTRAINT_VOLIATION' => 'violation of unique data constraint',
+                                    'UNABLE_TO_UPLOAD_FILE' => 'unable to upload file'
                                     ];
 
     public const DB_TIMESTAMP_FMT   = 'Y-m-d h:i:s';
@@ -1553,7 +1554,7 @@ class FileDatabase
         $record = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}";
         $file = $record . self::FILE_NAME_EXT;
         $meta = $this->_get_uploaded_file_meta($record);
-        if (isset($meta['name'])) {
+        if (isset($meta['name']) && file_exists($file)) {
             if ($is_attachment === true) {
                 header('Content-Description: File Transfer');
                 if (!is_null($mask)) {
@@ -1579,6 +1580,7 @@ class FileDatabase
             readfile($file);
             exit;
         }
+        header("HTTP/1.1 404 Not Found");
         return null;
     }
 
@@ -1717,15 +1719,24 @@ class FileDatabase
     private function _upload_file(string $name, string $target_file)
     {
         $this->_log(__METHOD__, ['_FILE' => $_FILES, 'name' => $name, 'target_file' => $target_file]);
-        if (isset($_FILES[$name])) {
+        if (isset($_FILES[$name]) && isset($_FILES[$name]['tmp_name'])) {
             if (move_uploaded_file($_FILES[$name]['tmp_name'], $target_file)) {
-                // TODO: handler
+                @chmod($target_file, octdec($this->chmod));
+                @chown($target_file, $this->chown_user);
+                @chgrp($target_file, $this->chown_group);
+                if (!file_exists($target_file)) {
+                    $this->_error(self::ERRORS['UNABLE_TO_UPLOAD_FILE'], $_FILES);
+                    return false;
+                }
             } else {
-                // TODO: handler
+                $this->_error(self::ERRORS['UNABLE_TO_UPLOAD_FILE'], $_FILES);
+                return false;
             }
         } else {
-            // TODO: handler 
+            $this->_error(self::ERRORS['REQUIRED_DATA_MISSING'], $_FILES);
+            return false;
         }
+        return true;
     }
 
     private function _read_file(string $file)
