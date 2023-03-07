@@ -42,9 +42,9 @@ final class Db
             && isset($request->get[$db->http_get_file_attachment_key])
         ) {
             $db->table($request->get[$db->http_get_file_table_key])
-                ->where($db::COL_ID, $request->get[$db->http_get_file_id_key])
             ->getFile(
                 $request->get[$db->http_get_file_col_key],
+                $request->get[$db->http_get_file_id_key],
                 $request->get[$db->http_get_file_mask],
                 (bool)$request->get[$db->http_get_file_attachment_key]
             );

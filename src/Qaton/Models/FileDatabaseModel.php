@@ -101,9 +101,9 @@ class FileDatabaseModel
     }
 
 
-    public function getFile($col, $mask, $is_attachment)
+    public function getFile($col, $id, $mask, $is_attachment)
     {
-        $this->db->getFile($col, $mask, $is_attachment);
+        $this->db->getFile($col, $id, $mask, $is_attachment);
         exit;
     }
 

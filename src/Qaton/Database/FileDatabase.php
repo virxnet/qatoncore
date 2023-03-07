@@ -1547,9 +1547,9 @@ class FileDatabase
         return null;
     }
 
-    public function getFile($col, $mask = null, $is_attachment = false)
+    public function getFile($col, $id, $mask = null, $is_attachment = false)
     {
-        $this->select($col)->first();
+        $this->_set_row($id);
         $record = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}";
         $file = $record . self::FILE_NAME_EXT;
         $meta = $this->_get_uploaded_file_meta($record);
