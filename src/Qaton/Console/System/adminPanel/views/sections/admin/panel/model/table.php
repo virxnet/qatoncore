@@ -57,7 +57,7 @@
                                 } elseif ($column_props['type'] == 'hashed') {
                                     echo "<td>********</td>";
                                 } elseif ($column_props['type'] == 'file') {
-                                    echo "<td>[FILE]</td>";
+                                    echo "<td>[<a href='?{$row[$column_name]['query']}'>FILE</a>]</td>";
                                 } else {
                                     echo "<td>{$row[$column_name]}</td>";
                                 }

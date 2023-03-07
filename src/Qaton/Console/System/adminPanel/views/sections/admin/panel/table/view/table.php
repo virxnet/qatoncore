@@ -42,7 +42,12 @@
                                 echo "********";
                                 break;
                             case 'file':
-                                echo "[FILE]";
+                                if (isset($value['meta']['type']) 
+                                    && substr($value['meta']['type'], 0, 5) == 'image'
+                                ) {
+                                    echo "<img width='300' src='?{$value['query']}'> <br/>";
+                                }
+                                echo "[<a href='?{$value['query']}'>FILE</a>]";
                                 break;
                             default:
                                 echo $value;

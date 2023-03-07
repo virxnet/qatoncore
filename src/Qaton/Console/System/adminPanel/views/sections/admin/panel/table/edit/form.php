@@ -67,6 +67,12 @@
                                 echo "<textarea class='form-control editor' type='text' name='{$column}'>{$value}</textarea>";
                                 break;
                             case 'file':
+                                if (isset($value['meta']['type']) 
+                                    && substr($value['meta']['type'], 0, 5) == 'image'
+                                ) {
+                                    echo "<img width='300' src='?{$value['query']}'> <br/>";
+                                }
+                                echo "[<a href='?{$value['query']}'>FILE</a>] &nbsp; ";
                                 echo "<input name='{$column}' type='file' />";
                                 break;
                             default:

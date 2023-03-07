@@ -202,6 +202,15 @@ class FileDatabase
     public $manage_from_offset_prefix = 'page';
     public $manage_from_offset_suffix = 'from';
     public $searchable_by_default = true;
+    public $http_get_file_table_key = 'filedatabase_resource';
+    public $http_get_file_col_key = 'filedatabase_node';
+    public $http_get_file_id_key = 'filedatabase_id';
+    public $http_get_file_mask = 'filedatabase_mask';
+    public $http_get_file_attachment_key = 'filedatabase_attachment';
+    public $http_get_file_is_attachment = 0; //false
+    public $http_get_file_ref_query_key = 'query';
+    //public $http_get_file_ref_url_key = 'url';
+    public $http_get_file_ref_meta_key = 'meta';
     
 
     public function __construct()
@@ -361,9 +370,10 @@ class FileDatabase
         return $this;
     }
 
-    public function withFiles()
+    public function withFiles($is_attachment = false)
     {
         $this->with_files = true;
+        $this->http_get_file_is_attachment = $is_attachment;
         return $this;
     }
 
@@ -589,9 +599,7 @@ class FileDatabase
 
                             case self::TYPE_FILE:
                                 if (isset($where_filtered[$col]) && $this->with_files === true) {
-                                    $where_filtered[$col] = '~FILE~';
-                                } else {
-                                    $where_filtered[$col] = "!FILE!";
+                                    $where_filtered[$col] = $this->_get_uploaded_file_ref($this->table, $col, $serial_index[$i]);
                                 }
                                 break;
                         }
@@ -1509,28 +1517,47 @@ class FileDatabase
         return true;
     }
 
-    private function _get_uploaded_file_meta($file)
+    private function _get_uploaded_file_meta($record)
     {
-        if (file_exists($file)) {
-            return $this->_read_json_file($file);
+        if (file_exists($record . self::FILE_META)) {
+            return $this->_read_json_file($record . self::FILE_META);
         }
         return false;
     }
 
-    private function _get_uploaded_file($file, $name)
+    private function _get_uploaded_file_ref($table, $col, $id)
     {
-        $meta = $this->_get_uploaded_file_meta($file);
-        if ($meta && isset($meta['name'])) {
-            $file_info = pathinfo($file);
-            if (false !== ($handler = fopen($file, 'r'))) {
+        $record = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}";
+        $file = $record . self::FILE_NAME_EXT;
+        $meta = $this->_get_uploaded_file_meta($record);
+        if (isset($meta['name'])) {
+            $file_info = pathinfo($meta['name']);
+            $ref = [
+                $this->http_get_file_table_key => $table,
+                $this->http_get_file_col_key => $col,
+                $this->http_get_file_id_key => $id,
+                $this->http_get_file_attachment_key => $this->http_get_file_is_attachment,
+                $this->http_get_file_mask => $col . '.' . $file_info['extension'],
+            ];
+            return [
+                $this->http_get_file_ref_query_key => http_build_query($ref),
+                $this->http_get_file_ref_meta_key => $meta
+            ];
+        }
+        return null;
+    }
+
+    public function getFile($col, $mask = null, $is_attachment = false)
+    {
+        $this->select($col)->first();
+        $record = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}";
+        $file = $record . self::FILE_NAME_EXT;
+        $meta = $this->_get_uploaded_file_meta($record);
+        if (isset($meta['name'])) {
+            if ($is_attachment === true) {
                 header('Content-Description: File Transfer');
-                if (isset($meta['type'])) {
-                    header('Content-Type: ' . $meta['type']);
-                } else {
-                    header('Content-Type: application/octet-stream');
-                }
-                if (isset($file_info['extension'])) {
-                    header('Content-Disposition: attachment; filename=' . $name . '.' . $file_info['extension']);
+                if (!is_null($mask)) {
+                    header('Content-Disposition: attachment; filename=' . $mask);
                 } else {
                     header('Content-Disposition: attachment; filename=' . $meta['name']);
                 }
@@ -1538,16 +1565,18 @@ class FileDatabase
                 header('Expires: 0');
                 header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
                 header('Pragma: public');
-                if (isset($meta['size'])) {
-                    header('Content-Length: ' . $meta['size']);
-                } else {
-                    header('Content-Length: ' . filesize($file));
-                }
-                while (false !== ($chunk = fread($handler,4096)))
-                {
-                    echo $chunk;
-                }
             }
+            if (isset($meta['type'])) {
+                header('Content-Type: ' . $meta['type']);
+            } else {
+                header('Content-Type: application/octet-stream');
+            }
+            if (isset($meta['size'])) {
+                header('Content-Length: ' . $meta['size']);
+            } else {
+                header('Content-Length: ' . filesize($file));
+            }
+            readfile($file);
             exit;
         }
         return null;

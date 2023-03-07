@@ -94,10 +94,17 @@ class FileDatabaseModel
         return $this;
     }
 
-    public function withFiles()
+    public function withFiles($as_attachment = false)
     {
-        $this->db->withFiles();
+        $this->db->withFiles($as_attachment);
         return $this;
+    }
+
+
+    public function getFile($col, $mask, $is_attachment)
+    {
+        $this->db->getFile($col, $mask, $is_attachment);
+        exit;
     }
 
     public function explain()
