@@ -94,12 +94,35 @@ class FileDatabaseModel
         return $this;
     }
 
-    public function withFiles($as_attachment = false)
+    public function withFiles($base_path, $is_attachment = false)
     {
-        $this->db->withFiles($as_attachment);
+        $this->db->withFiles($base_path, $is_attachment = false);
         return $this;
     }
 
+    public function withQueryFiles($as_attachment = false)
+    {
+        $this->db->withQueryFiles($as_attachment);
+        return $this;
+    }
+
+    public function withRealFiles()
+    {
+        $this->db->withRealFiles();
+        return $this;
+    }
+
+    public function withSymFiles($base_path)
+    {
+        $this->db->withSymFiles($base_path);
+        return $this;
+    }
+
+    public function withFilesMeta()
+    {
+        $this->db->withFilesMeta();
+        return false;
+    }
 
     public function getFile($col, $id, $mask, $is_attachment)
     {

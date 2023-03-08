@@ -33,7 +33,7 @@ class Panel
 
         if ($model = $this->getModelInstanceBySlug($model_slug)) {
             $this->data['schema'] = $model->explain();
-            $this->data['data'] = $model->withFiles(true)->get(); // TODO: implement pagination
+            $this->data['data'] = $model->withQueryFiles(true)->get(); // TODO: implement pagination
             $this->data['model'] = $model;
             $this->view->section("sections/admin/panel/model", "layouts/admin/panel", $this->data);
         }
@@ -49,10 +49,10 @@ class Panel
         switch ($action) {
             case 'view':
             case 'clone':
-                $this->data['data'] = $model->where('id', $id)->withFiles(true)->allForeign()->first();
+                $this->data['data'] = $model->where('id', $id)->withQueryFiles(true)->allForeign()->first();
                 break;
             case 'edit':
-                $this->data['data'] = $model->where('id', $id)->withFiles(true)->allForeign()->first();
+                $this->data['data'] = $model->where('id', $id)->withQueryFiles(true)->allForeign()->first();
                 $this->data['foreigners'] = $model->getForeign();
                 break;
             case 'create':

@@ -40,6 +40,8 @@ class FileDatabase
     public const TEXT_EXT           = '.txt';
     public const FILE_NAME_EXT      = '.file.data';
     public const FILE_META          = '.file.meta.json';
+    public const FILE_SYM_TRACK     = '.sym_track.link';
+    public const FILE_MASK          = '[FILE]';
     public const JSON_EXT           = '.json';
     public const LOG_EXT            = '.log';
     public const TEXT_VAL           = '~txt';
@@ -180,7 +182,10 @@ class FileDatabase
     private $masked = true;
     private $verify_unhashed_columns = array();
     private $with_hashed = false;
-    private $with_files = false;
+    private $with_query_files = false;
+    private $with_sym_files = false;
+    private $with_real_files = false;
+    private $with_files_meta = false;
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -203,6 +208,8 @@ class FileDatabase
     public $manage_from_offset_prefix = 'page';
     public $manage_from_offset_suffix = 'from';
     public $searchable_by_default = true;
+    public $http_get_file_basepath = false;
+    public $http_get_file_baseurl = false;
     public $http_get_file_table_key = 'filedatabase_resource';
     public $http_get_file_col_key = 'filedatabase_node';
     public $http_get_file_id_key = 'filedatabase_id';
@@ -212,7 +219,11 @@ class FileDatabase
     public $http_get_file_ref_query_key = 'query';
     //public $http_get_file_ref_url_key = 'url';
     public $http_get_file_ref_meta_key = 'meta';
-    
+    public $http_get_file_ref_filename_key = 'real_file';
+    public $http_get_file_ref_sym_url_key = 'url';
+    public $http_get_file_ref_sym_file_key = 'file';
+    public $http_get_file_ref_sym_basepath_key = 'basepath';
+    public $http_get_file_ref_sym_basename_key = 'basename';
 
     public function __construct()
     {
@@ -371,10 +382,37 @@ class FileDatabase
         return $this;
     }
 
-    public function withFiles($is_attachment = false)
+    public function withFiles($base_path, $is_attachment = false)
     {
-        $this->with_files = true;
+        $this->withQueryFiles($is_attachment);
+        $this->withRealFiles();
+        $this->withSymFiles($base_path);
+        $this->withFilesMeta();
+        return $this;
+    }
+
+    public function withQueryFiles($is_attachment = false)
+    {
+        $this->with_query_files = true;
         $this->http_get_file_is_attachment = $is_attachment;
+        return $this;
+    }
+
+    public function withRealFiles()
+    {
+        $this->with_real_files = true;
+        return $this;
+    }
+
+    public function withSymFiles($base_path)
+    {
+        $this->with_sym_files = $base_path;
+        return $this;
+    }
+
+    public function withFilesMeta()
+    {
+        $this->with_files_meta = true;
         return $this;
     }
 
@@ -599,8 +637,17 @@ class FileDatabase
                                 break;
 
                             case self::TYPE_FILE:
-                                if (isset($where_filtered[$col]) && $this->with_files === true) {
+                                if (
+                                    isset($where_filtered[$col])
+                                    && ( $this->with_query_files === true
+                                        || $this->with_sym_files !== false
+                                        || $this->with_real_files === true
+                                        || $this->with_files_meta === true
+                                    )
+                                ) {
                                     $where_filtered[$col] = $this->_get_uploaded_file_ref($this->table, $col, $serial_index[$i]);
+                                } elseif (isset($where_filtered[$col])) {
+                                    $where_filtered[$col] = self::FILE_MASK;
                                 }
                                 break;
                         }
@@ -1520,18 +1567,24 @@ class FileDatabase
 
     private function _get_uploaded_file_meta($record)
     {
-        if (file_exists($record . self::FILE_META)) {
-            return $this->_read_json_file($record . self::FILE_META);
+        $file = realpath($record . self::FILE_META);
+        if (file_exists($file)) {
+            return $this->_read_json_file($file);
         }
+        $this->_error(self::ERRORS['FILE_DOES_NOT_EXIST'], $file);
         return false;
     }
 
     private function _get_uploaded_file_ref($table, $col, $id)
     {
         $record = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}";
-        $file = $record . self::FILE_NAME_EXT;
+        $file = realpath($record . self::FILE_NAME_EXT);
         $meta = $this->_get_uploaded_file_meta($record);
-        if (isset($meta['name'])) {
+        if (!file_exists($file)) {
+            $this->_error(self::ERRORS['FILE_DOES_NOT_EXIST'], $file);
+            return null;
+        }
+        if (isset($meta['name']) && $meta['name'] != "") {
             $file_info = pathinfo($meta['name']);
             $ref = [
                 $this->http_get_file_table_key => $table,
@@ -1540,10 +1593,23 @@ class FileDatabase
                 $this->http_get_file_attachment_key => $this->http_get_file_is_attachment,
                 $this->http_get_file_mask => $col . '.' . $file_info['extension'],
             ];
-            return [
-                $this->http_get_file_ref_query_key => http_build_query($ref),
-                $this->http_get_file_ref_meta_key => $meta
-            ];
+            $res = [];
+            if ($this->with_real_files === true) {
+                $res[$this->http_get_file_ref_filename_key] = $file;
+            }
+            if ($this->with_sym_files !== false) {
+                $sym = $this->_get_or_create_file_sym($file, $this->with_sym_files, $table, $col, $id, $file_info['extension'], $record);
+                if (is_array($sym)) {
+                    $res = array_merge($res, $sym);
+                }
+            }
+            if ($this->with_query_files === true) {
+                $res[$this->http_get_file_ref_query_key] = http_build_query($ref);
+            }
+            if ($this->with_files_meta === true) {
+                $res[$this->http_get_file_ref_meta_key] = $meta;
+            }
+            return $res;
         }
         return null;
     }
@@ -1654,6 +1720,46 @@ class FileDatabase
         }
 
         rmdir($directory);
+    }
+
+    private function _update_file_record_sym_tracker($record, $link)
+    {
+        $tracker = $record . self::FILE_SYM_TRACK;
+        if (!file_exists($tracker)) {
+            $this->_write_file($tracker, $link);
+        }
+    }
+
+    private function _get_or_create_file_sym($file, $basepath, $table, $col, $id, $extension, $record)
+    {
+        $full_basepath = $this->http_get_file_basepath . DIRECTORY_SEPARATOR . $basepath;
+        if (!realpath($full_basepath) || !is_dir($full_basepath)) {
+            $this->_error(self::ERRORS['FILE_DOES_NOT_EXIST'], $full_basepath);
+            return false;
+        }
+        if (!is_writable($full_basepath)) {
+            $this->_error(self::ERRORS['FILE_NOT_WRITABLE'], $full_basepath);
+            return false;
+        }
+        $path = $full_basepath . DIRECTORY_SEPARATOR . $table . DIRECTORY_SEPARATOR;
+        if (!is_dir($path)) {
+            $this->_mkdir($path);
+        }
+        $sym_filename = "{$table}-{$col}-{$id}.{$extension}";
+        $sym_file = realpath($path) . DIRECTORY_SEPARATOR . $sym_filename;
+        if (!file_exists($sym_file)) {
+            symlink($file, $sym_file);
+            @chmod($sym_file, octdec($this->chmod));
+            @chown($sym_file, $this->chown_user);
+            @chgrp($sym_file, $this->chown_group);
+            $this->_update_file_record_sym_tracker($record, $sym_file);
+        }
+        return [
+            $this->http_get_file_ref_sym_url_key => $this->http_get_file_baseurl . $basepath . $table . '/' . $sym_filename,
+            $this->http_get_file_ref_sym_file_key => $sym_file,
+            $this->http_get_file_ref_sym_basepath_key => realpath($path),
+            $this->http_get_file_ref_sym_basename_key => $sym_filename
+        ];
     }
 
     private function _mkdir(string $directory)
