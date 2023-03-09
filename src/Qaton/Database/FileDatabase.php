@@ -223,6 +223,7 @@ class FileDatabase
     public $http_get_file_ref_sym_url_key = 'url';
     public $http_get_file_ref_sym_file_key = 'file';
     public $http_get_file_ref_sym_basepath_key = 'basepath';
+    public $http_get_file_ref_sym_baseurl_key = 'baseurl';
     public $http_get_file_ref_sym_basename_key = 'basename';
 
     public function __construct()
@@ -1757,6 +1758,7 @@ class FileDatabase
         return [
             $this->http_get_file_ref_sym_url_key => $this->http_get_file_baseurl . $basepath . $table . '/' . $sym_filename,
             $this->http_get_file_ref_sym_file_key => $sym_file,
+            $this->http_get_file_ref_sym_baseurl_key => $this->http_get_file_baseurl . $basepath . $table . '/',
             $this->http_get_file_ref_sym_basepath_key => realpath($path),
             $this->http_get_file_ref_sym_basename_key => $sym_filename
         ];
