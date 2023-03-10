@@ -75,7 +75,7 @@
                                     }
                                     echo "[<a href='?{$value['url']}'>FILE</a>] &nbsp; ";
                                 } else {
-                                    echo "[FILE]";
+                                    echo "[FILE] &nbsp; ";
                                 }
                                 echo "<input name='{$column}' type='file' />";
                                 break;
