@@ -115,11 +115,17 @@ class Panel
 
                 $data = [];
                 foreach ($this->data['schema'] as $column => $props) {
-                    if (isset($this->request->post[$column]) && $this->data['schema'][$column]['type'] !== 'masked') {
+                    if (isset($this->request->post[$column])
+                        && $this->data['schema'][$column]['type'] !== 'masked'
+                        && $this->data['schema'][$column]['type'] !== 'file'
+                    ) {
                         $data[$column] = $this->request->post[$column];
                     }
+                    if (isset($_FILES[$column])) {
+                        $data[$column] = $_FILES[$column];
+                    }
                 }
-
+ 
                 if ($model->where('id', $id)->update($data)) {
                     HttpHeaders::redirect('/admin/panel/table/view/' . $model_slug . '/' .  $id);
                 }
