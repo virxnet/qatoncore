@@ -70,7 +70,7 @@
                                 if (isset($value['meta']['type']) 
                                     && substr($value['meta']['type'], 0, 5) == 'image'
                                 ) {
-                                    echo "<img width='300' src='?{$value['url']}'> <br/>";
+                                    echo "<img width='300' src='{$value['url']}'> <br/>";
                                 }
                                 echo "[<a href='?{$value['url']}'>FILE</a>] &nbsp; ";
                                 echo "<input name='{$column}' type='file' />";
