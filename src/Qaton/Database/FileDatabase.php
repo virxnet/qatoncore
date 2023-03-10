@@ -1832,7 +1832,7 @@ class FileDatabase
     private function _upload_file(string $name, string $target_file)
     {
         $this->_log(__METHOD__, ['_FILE' => $_FILES, 'name' => $name, 'target_file' => $target_file]);
-        _vd($_FILES);
+        //_vd($_FILES);
         exit();
         if (
             isset($_FILES[$name])
