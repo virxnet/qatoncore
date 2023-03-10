@@ -1832,7 +1832,18 @@ class FileDatabase
     private function _upload_file(string $name, string $target_file)
     {
         $this->_log(__METHOD__, ['_FILE' => $_FILES, 'name' => $name, 'target_file' => $target_file]);
-        if (isset($_FILES[$name]) && isset($_FILES[$name]['tmp_name'])) {
+        _vd($_FILES);
+        exit();
+        if (
+            isset($_FILES[$name])
+            && isset($_FILES[$name]['tmp_name'])
+            && isset($_FILES[$name]['error'])
+            && isset($_FILES[$name]['size'])
+            && $_FILES[$name] != ''
+            && $_FILES[$name]['tmp_name'] != ''
+            && $_FILES[$name]['error'] != 4
+            && $_FILES[$name]['size'] != 0
+        ) {
             if (move_uploaded_file($_FILES[$name]['tmp_name'], $target_file)) {
                 @chmod($target_file, octdec($this->chmod));
                 @chown($target_file, $this->chown_user);
