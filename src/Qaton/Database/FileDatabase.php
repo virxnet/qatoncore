@@ -1583,17 +1583,13 @@ class FileDatabase
         $meta = $this->_get_uploaded_file_meta($record);
         if (!file_exists($file)) {
             $this->_error(self::ERRORS['FILE_DOES_NOT_EXIST'], $file);
+            if ($this->with_query_files === true) {
+                return '#';
+            }
             return null;
         }
         if (isset($meta['name']) && $meta['name'] != "") {
             $file_info = pathinfo($meta['name']);
-            $ref = [
-                $this->http_get_file_table_key => $table,
-                $this->http_get_file_col_key => $col,
-                $this->http_get_file_id_key => $id,
-                $this->http_get_file_attachment_key => $this->http_get_file_is_attachment,
-                $this->http_get_file_mask => $col . '.' . $file_info['extension'],
-            ];
             $res = [];
             if ($this->with_real_files === true) {
                 $res[$this->http_get_file_ref_filename_key] = $file;
@@ -1605,6 +1601,13 @@ class FileDatabase
                 }
             }
             if ($this->with_query_files === true) {
+                $ref = [
+                    $this->http_get_file_table_key => $table,
+                    $this->http_get_file_col_key => $col,
+                    $this->http_get_file_id_key => $id,
+                    $this->http_get_file_attachment_key => $this->http_get_file_is_attachment,
+                    $this->http_get_file_mask => $col . '.' . $file_info['extension'],
+                ];
                 $res[$this->http_get_file_ref_query_key] = http_build_query($ref);
             }
             if ($this->with_files_meta === true) {

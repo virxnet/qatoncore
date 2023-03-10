@@ -24,7 +24,7 @@ final class Db
                             exit;
                         }
                         $db->http_get_file_basepath = $config['BASE_PATH'];
-                        $db->http_get_file_baseurl = $config['BASE_URL'];
+                        $db->http_get_file_baseurl = @$config['BASE_URL'];
                         return $db;
                     }
                     break;
