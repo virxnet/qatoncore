@@ -78,6 +78,9 @@ class Panel
                                             . str_replace(':', '/', $model_slug);
                 $data = [];
                 foreach ($this->data['schema'] as $column => $props) {
+                    if (!isset($this->request->post[$column])) {
+                        continue;
+                    }
                     switch ($this->data['schema'][$column]['type']) {
                         case 'int':
                         case 'integer':
