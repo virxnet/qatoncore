@@ -79,7 +79,7 @@ class Panel
                 $data = [];
                 foreach ($this->data['schema'] as $column => $props) {
                     if (!isset($this->request->post[$column])) {
-                        continue;
+                        $data[$column] = null;
                     }
                     switch ($this->data['schema'][$column]['type']) {
                         case 'int':

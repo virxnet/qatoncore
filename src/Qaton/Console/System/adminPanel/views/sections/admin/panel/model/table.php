@@ -58,7 +58,11 @@
                                     echo "<td>********</td>";
                                 } elseif ($column_props['type'] == 'file') {
                                     //_vd($row[$column_name]);
-                                    echo "<td>[<a href='?{$row[$column_name]['query']}'>FILE</a>]</td>";
+                                    if (isset($row[$column_name]['query'])) {
+                                        echo "<td>[<a href='?{$row[$column_name]['query']}'>FILE</a>]</td>";
+                                    } else {
+                                        echo "<td>[FILE]</td>";
+                                    }
                                 } else {
                                     echo "<td>{$row[$column_name]}</td>";
                                 }
