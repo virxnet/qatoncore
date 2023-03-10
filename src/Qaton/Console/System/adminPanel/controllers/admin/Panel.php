@@ -78,9 +78,6 @@ class Panel
                                             . str_replace(':', '/', $model_slug);
                 $data = [];
                 foreach ($this->data['schema'] as $column => $props) {
-                    if (!isset($this->request->post[$column])) {
-                        $data[$column] = null;
-                    }
                     switch ($this->data['schema'][$column]['type']) {
                         case 'int':
                         case 'integer':
@@ -94,7 +91,10 @@ class Panel
                         case 'timestamp':
                             break;
                         default:
-                            $data[$column] = $this->request->post[$column];
+                            $data[$column] = null;
+                            if (isset($this->request->post[$column])) {
+                               $data[$column] = $this->request->post[$column];
+                            }
                     }
                 }
                 if ($model->where('id', $id)->insert($data)) {

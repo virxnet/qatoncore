@@ -45,10 +45,15 @@
                                 //_vd($value);
                                 if (isset($value['meta']['type']) 
                                     && substr($value['meta']['type'], 0, 5) == 'image'
+                                    && isset($value['url'])
                                 ) {
                                     echo "<img width='300' src='{$value['url']}'> <br/>";
                                 }
-                                echo "[<a href='?{$value['query']}'>FILE</a>]";
+                                if (isset($value['query'])) {
+                                    echo "[<a href='?{$value['query']}'>FILE</a>]";
+                                } else {
+                                    echo "[FILE]";
+                                }
                                 break;
                             default:
                                 echo $value;
