@@ -1836,11 +1836,11 @@ class FileDatabase
                 @chown($target_file, $this->chown_user);
                 @chgrp($target_file, $this->chown_group);
                 if (!file_exists($target_file)) {
-                    $this->_error(self::ERRORS['UNABLE_TO_UPLOAD_FILE'], $_FILES);
+                    $this->_error_fatal(self::ERRORS['UNABLE_TO_UPLOAD_FILE'], $_FILES);
                     return false;
                 }
             } else {
-                $this->_error(self::ERRORS['UNABLE_TO_UPLOAD_FILE'], $_FILES);
+                $this->_error_fatal(self::ERRORS['UNABLE_TO_UPLOAD_FILE'], $_FILES);
                 return false;
             }
         } else {
