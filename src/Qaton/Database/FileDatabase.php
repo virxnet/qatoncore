@@ -1598,6 +1598,8 @@ class FileDatabase
                 $sym = $this->_get_or_create_file_sym($file, $this->with_sym_files, $table, $col, $id, $file_info['extension'], $record);
                 if (is_array($sym)) {
                     $res = array_merge($res, $sym);
+                } else {
+                    // TODO: Error handler
                 }
             }
             if ($this->with_query_files === true) {
@@ -1738,11 +1740,11 @@ class FileDatabase
     {
         $full_basepath = $this->http_get_file_basepath . DIRECTORY_SEPARATOR . $basepath;
         if (!realpath($full_basepath) || !is_dir($full_basepath)) {
-            $this->_error(self::ERRORS['FILE_DOES_NOT_EXIST'], $full_basepath);
+            $this->_error_fatal(self::ERRORS['FILE_DOES_NOT_EXIST'], $full_basepath);
             return false;
         }
         if (!is_writable($full_basepath)) {
-            $this->_error(self::ERRORS['FILE_NOT_WRITABLE'], $full_basepath);
+            $this->_error_fatal(self::ERRORS['FILE_NOT_WRITABLE'], $full_basepath);
             return false;
         }
         $path = $full_basepath . DIRECTORY_SEPARATOR . $table . DIRECTORY_SEPARATOR;

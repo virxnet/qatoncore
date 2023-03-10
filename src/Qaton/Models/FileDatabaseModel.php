@@ -96,7 +96,7 @@ class FileDatabaseModel
 
     public function withFiles($base_path, $is_attachment = false)
     {
-        $this->db->withFiles($base_path, $is_attachment = false);
+        $this->db->withFiles($base_path, $is_attachment);
         return $this;
     }
 
