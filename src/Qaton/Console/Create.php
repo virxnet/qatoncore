@@ -29,7 +29,7 @@ class Create extends Console
     {
         //
     }
-
+    
     public function migration(array $args)
     {
         if (!isset($this->options['template'])) {
@@ -318,8 +318,14 @@ class Create extends Console
         $template_file = __DIR__ . DIRECTORY_SEPARATOR . 'Create' . DIRECTORY_SEPARATOR
                             . $resource . DIRECTORY_SEPARATOR . $this->resource_template;
         if (isset($this->options['template'])) {
-            $template_file = $this->config['APP_PATHS']['TEMPLATES'] . $resource
+            $file = $this->config['APP_PATHS']['TEMPLATES'] . $resource
                             . DIRECTORY_SEPARATOR . $this->options['template'] . parent::PHP_EXT;
+            if (file_exists($file)) {
+                $template_file = $file;
+            } else {
+                $template_file = __DIR__ . DIRECTORY_SEPARATOR . 'Create' . DIRECTORY_SEPARATOR
+                            . $resource . DIRECTORY_SEPARATOR . $this->options['template'] . parent::PHP_EXT;
+            }
         }
         if (isset($this->options['template_file'])) {
             $template_file = $this->options['template_file'];

@@ -816,15 +816,54 @@ class FileDatabase
         }
     }
 
-    public function create(array $columns, array $options = array())
+    public function alter(array $columns, array $options = array())
     {
         $this->_log(__METHOD__, ['columns' => $columns, 'options' => $options]);
 
-        if (array_key_exists($this->table, $this->schema[self::SCHEMA_TABLES]) && is_dir($this->table_dir)) {
-            $this->_error_warn(self::ERRORS['TABLE_EXISTS'], $this->schema[self::SCHEMA_TABLES]);
-            return false;
+        if (!isset($this->schema[self::SCHEMA_TABLES][$this->table])) {
+            $this->_error_fatal(self::ERRORS['TABLE_NOT_EXISTS'], $this->table);
         }
 
+        $current_schema = $this->schema[self::SCHEMA_TABLES][$this->table];
+
+        unset($current_schema[self::COL_CREATED]);
+        unset($current_schema[self::COL_UPDATED]);
+        unset($current_schema[self::COL_DELETED]);
+
+        $this->create($columns, $options, true);
+
+        $new_schema = $this->schema[self::SCHEMA_TABLES][$this->table];
+
+        $this->schema[self::SCHEMA_TABLES][$this->table] = array_merge($current_schema, $new_schema);
+
+        $this->_update_schema();
+
+        // TODO: improve this, will cause memory issues on large tables
+        $rows = $this->select('id')->get();
+        foreach ($rows as $row) {
+            foreach ($columns as $column_name => $column) {
+                $value = '';
+                if (isset($column[self::PROP_DEFAULT])) {
+                    $value = $column[self::PROP_DEFAULT];
+                }
+                $this->update([$column_name => $value]);
+            }
+        }
+        
+        return true;
+    }
+
+    public function create(array $columns, array $options = array(), bool $skip_create = false )
+    {
+        $this->_log(__METHOD__, ['columns' => $columns, 'options' => $options]);
+
+        if ($skip_create === false) {
+            if (array_key_exists($this->table, $this->schema[self::SCHEMA_TABLES]) && is_dir($this->table_dir)) {
+                $this->_error_warn(self::ERRORS['TABLE_EXISTS'], $this->schema[self::SCHEMA_TABLES]);
+                return false;
+            }
+        }
+        
         $required_table_column_properties = [
             self::PROP_TYPE
         ];
@@ -883,6 +922,10 @@ class FileDatabase
 
         $this->schema[self::SCHEMA_TABLES][$this->table] = $columns;
 
+        if ($skip_create === true) {
+            return true;
+        }
+
         $this->_update_schema();
         $this->_create_table_dir();
         $this->_create_table_meta();
@@ -920,10 +963,12 @@ class FileDatabase
                     }
 
                     // TODO: improve this (redundant and messy) -- see also the same for _process_insert_value()
-                    if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
-                        $this->_reset_search_index($col, $record[self::COL_ID], $records[$index][$col], $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
-                    } else {
-                        $this->_reset_search_index($col, $record[self::COL_ID], $records[$index][$col], null);
+                    if (isset($records[$index][$col])) {
+                        if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
+                            $this->_reset_search_index($col, $record[self::COL_ID], $records[$index][$col], $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
+                        } else {
+                            $this->_reset_search_index($col, $record[self::COL_ID], $records[$index][$col], null);
+                        }
                     }
 
                     if (isset($data[$col])) {
@@ -972,10 +1017,12 @@ class FileDatabase
                     }
 
                     // TODO: improve this (redundant and messy) -- see also the same for _process_insert_value()
-                    if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
-                        $this->_update_search_index($col, $record[self::COL_ID], $records[$index][$col], $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
-                    } else {
-                        $this->_update_search_index($col, $record[self::COL_ID], $records[$index][$col], null);
+                    if (isset($records[$index][$col])) {
+                        if (isset($this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE])) {
+                            $this->_update_search_index($col, $record[self::COL_ID], $records[$index][$col], $this->schema[self::SCHEMA_TABLES][$this->table][$col][self::PROP_SEARCHABLE]);
+                        } else {
+                            $this->_update_search_index($col, $record[self::COL_ID], $records[$index][$col], null);
+                        }
                     }
                     
                 }
