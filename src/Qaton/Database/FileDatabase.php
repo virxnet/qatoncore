@@ -1001,12 +1001,14 @@ class FileDatabase
 
                             case self::TYPE_FILE:
                                 // TODO: optimize
-                                $file = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}"  . self::FILE_NAME_EXT;
-                                unlink($file);
-                                $this->_upload_file($col, $file);
-                                $meta = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}" . self::FILE_META;
-                                unlink($meta);
-                                $this->_write_file($meta, json_encode($_FILES[$col]));
+                                if (isset($_FILES[$col]['error']) && $_FILES[$col]['error'] != 4) {
+                                    $file = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}"  . self::FILE_NAME_EXT;
+                                    unlink($file);
+                                    $this->_upload_file($col, $file);
+                                    $meta = $this->row_data_dir . DIRECTORY_SEPARATOR . "{$col}" . self::FILE_META;
+                                    unlink($meta);
+                                    $this->_write_file($meta, json_encode($_FILES[$col]));
+                                }
                                 break;
 
                             // TODO: foreign intellignent type switch based on key > schema > type
