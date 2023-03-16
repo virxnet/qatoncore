@@ -46,7 +46,9 @@ class View
         if (is_array($this->data)) {
             extract($this->data);
         }
+        ob_start('compress_page_html'); // TODO: Added to clean output but needs cache
         include($this->view);
+        ob_end_flush(); // TODO: Added to clean output but needs cache
     }
 
     public function fetch(string $view = null, array $data = [])
@@ -148,4 +150,5 @@ class View
     {
         $this->views_path = $path;
     }
+
 }

@@ -63,3 +63,12 @@ if (!function_exists('getIP')) {
         return $ip_address;
     }
 }
+
+if (!function_exists('compress_page_html')) {
+    function compress_page_html($buffer)
+    {
+        $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
+        $buffer = preg_replace('/\s+/', ' ', $buffer);
+        return str_replace(array("\n", "\t", "\r"), '', $buffer);
+    }
+}
