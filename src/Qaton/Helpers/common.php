@@ -67,8 +67,27 @@ if (!function_exists('getIP')) {
 if (!function_exists('compress_page_html')) {
     function compress_page_html($buffer)
     {
-        $buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
-        $buffer = preg_replace('/\s+/', ' ', $buffer);
-        return str_replace(array("\n", "\t", "\r"), '', $buffer);
+        // TODO: improve and optimize this, using basic tidy as temp solution 
+        // TODO: cache support
+        if (class_exists('tidy')) {
+            // Specify configuration
+            $config = array(
+                //'clean'          => true,
+                'indent-with-tabs' => true,
+                'tab-size' => 4,
+                'hide-comments'  => true,
+                'indent'         => true,
+                'output-html'   => true,
+                'wrap'           => 200
+            );
+            $tidy = new tidy();
+            $tidy->parseString($buffer, $config, 'utf8');
+            $tidy->cleanRepair();
+            return $tidy;
+        }
+        return $buffer;
+        //$buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
+        //$buffer = preg_replace('/\s+/', ' ', $buffer);
+        //return str_replace(array("\n", "\t", "\r"), '', $buffer);
     }
 }
