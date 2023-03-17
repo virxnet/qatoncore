@@ -100,7 +100,7 @@ if (!function_exists('compress_page_html')) {
             '/[^\S ]+\</s',     // strip whitespaces before tags, except space
             //'/(\s)+/s',         // shorten multiple whitespace sequences
             '/<!--(.|\s)*?-->/', // Remove HTML comments,
-            '/\s\s+/' // replace multiple spaces with single 
+            //'/\s\s+/' // replace multiple spaces with single 
         );
     
         $replace = array(
@@ -108,7 +108,7 @@ if (!function_exists('compress_page_html')) {
             '<',
             //'\\1',
             '',
-            ' '
+            //' '
         );
     
         return preg_replace($search, $replace, $buffer);
