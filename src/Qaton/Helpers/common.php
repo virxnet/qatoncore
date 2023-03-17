@@ -67,6 +67,7 @@ if (!function_exists('getIP')) {
 if (!function_exists('compress_page_html')) {
     function compress_page_html($buffer)
     {
+        /*
         // TODO: improve and optimize this, using basic tidy as temp solution 
         // TODO: cache support
         if (class_exists('tidy')) {
@@ -77,17 +78,39 @@ if (!function_exists('compress_page_html')) {
                 'tab-size' => 4,
                 'hide-comments'  => true,
                 'indent'         => true,
-                'output-html'   => true,
-                'wrap'           => 200
+                //'output-html'   => true,
+                'wrap'           => 200,
+                'output-xhtml'   => false,
+                //'show-body-only' => true
             );
             $tidy = new tidy();
             $tidy->parseString($buffer, $config, 'utf8');
             $tidy->cleanRepair();
             return $tidy;
         }
-        return $buffer;
+        */
+        //return $buffer;
+
         //$buffer = preg_replace('/<!--(.|\s)*?-->/', '', $buffer);
-        //$buffer = preg_replace('/\s+/', ' ', $buffer);
+        //$buffer = preg_replace('/\s+/', " ", $buffer);
         //return str_replace(array("\n", "\t", "\r"), '', $buffer);
+
+        $search = array(
+            '/\>[^\S ]+/s',     // strip whitespaces after tags, except space
+            '/[^\S ]+\</s',     // strip whitespaces before tags, except space
+            //'/(\s)+/s',         // shorten multiple whitespace sequences
+            '/<!--(.|\s)*?-->/', // Remove HTML comments,
+            '/\s\s+/' // replace multiple spaces with single 
+        );
+    
+        $replace = array(
+            '>',
+            '<',
+            //'\\1',
+            '',
+            ' '
+        );
+    
+        return preg_replace($search, $replace, $buffer);
     }
 }
