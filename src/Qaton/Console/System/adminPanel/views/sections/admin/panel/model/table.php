@@ -47,7 +47,11 @@
                         <td><?php echo $row['id'] ?></td>
                         <?php
                         foreach ($schema as $column_name => $column_props) {
-                            if ($column_props['type'] != 'text'  && $column_name != 'deleted_on') {
+                            if (
+                                $column_props['type'] != 'text'
+                                && $column_props['type'] != 'html'
+                                && $column_props['type'] != 'md'
+                                && $column_name != 'deleted_on') {
                                 if ($column_props['type'] == 'foreign') {
                                     echo "<td><a href='{$this->base_url}admin/panel/table/view/:"
                                             . ucfirst($column_name) . "/{$row[$column_name]}"
