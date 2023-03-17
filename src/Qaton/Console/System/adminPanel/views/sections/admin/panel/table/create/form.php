@@ -49,14 +49,25 @@
                         <style type="text/css" media="screen">
                             #ace_' . $column . ' { 
                                 height: 500px;
-                                width: 100%;
+                                width: 50%;
+                                float: left;
+                            }
+                            #ace_preview_' . $column . ' { 
+                                height: 500px;
+                                width: 50%;
+                                float: right;
+                                background: #fff;
+                                padding: 10px;
+                                border: 1px solid #000;
                             }
                         </style>
                         ';
                         echo "<div id='ace_{$column}'/></div>";
+                        echo "<div id='ace_preview_{$column}' contenteditable='false'/></div>";
                         echo "<textarea type='text' name='{$column}' id='html_{$column}'></textarea>";
                         echo '
                         <script>
+                            var ace_preview = $("#ace_preview_' . $column . '");
                             var textarea = $("#html_' . $column . '").hide();
                             var ace_editor = ace.edit("ace_' . $column . '");
                             ace_editor.setFontSize("16px");
@@ -65,8 +76,10 @@
                             ace_editor.getSession().setValue(textarea.val());
                             ace_editor.getSession().on(\'change\', function(){
                                 textarea.val(ace_editor.getSession().getValue());
+                                ace_preview.html(ace_editor.getSession().getValue());
                             });
                             textarea.val(ace_editor.getSession().getValue());
+                            ace_preview.html(ace_editor.getSession().getValue());
                         </script>
                         ';
                         break;
