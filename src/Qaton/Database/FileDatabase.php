@@ -721,7 +721,6 @@ class FileDatabase
 
     public function insert(array $data)
     {
-
         $this->_log(__METHOD__, $data);
 
         $this->meta = $this->_get_table_meta();
@@ -991,6 +990,7 @@ class FileDatabase
                                 break;
 
                             case self::TYPE_TEXT:
+                            case self::TYPE_HTML:
                                 $file = $this->row_data_dir . DIRECTORY_SEPARATOR . $col . self::TEXT_EXT;
                                 $this->_write_file($file, $data[$col]);
                                 break;

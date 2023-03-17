@@ -6,6 +6,8 @@
         <tr>
             <th class="text-right" style="width: 10%;">
                 <?php echo $column ?>
+                <br>
+                <small><?php echo @$schema[$column]['type'] ?></small>
             </th>
             <td>
                 <?php if (isset($schema[$column]['type']) && $schema[$column]['type'] === 'foreign'): ?>
@@ -62,6 +64,32 @@
                                 break;
                             case 'hashed':
                                 echo "<input class='form-control' type='password' name='{$column}'>";
+                                break;
+                            case 'html':
+                                echo '
+                                <style type="text/css" media="screen">
+                                    #ace_' . $column . ' { 
+                                        height: 500px;
+                                        width: 100%;
+                                    }
+                                </style>
+                                ';
+                                echo "<div id='ace_{$column}'/>{$value}</div>";
+                                echo "<textarea type='text' name='{$column}' id='html_{$column}'>{$value}</textarea>";
+                                echo '
+                                <script>
+                                    var textarea = $("#html_' . $column . '").hide();
+                                    var ace_editor = ace.edit("ace_' . $column . '");
+                                    ace_editor.setFontSize("16px");
+                                    ace_editor.setTheme("ace/theme/monokai");
+                                    ace_editor.session.setMode("ace/mode/html");
+                                    ace_editor.getSession().setValue(textarea.val());
+                                    ace_editor.getSession().on(\'change\', function(){
+                                        textarea.val(ace_editor.getSession().getValue());
+                                    });
+                                    textarea.val(ace_editor.getSession().getValue());
+                                </script>
+                                ';
                                 break;
                             case 'text':
                                 echo "<textarea class='form-control editor' type='text' name='{$column}'>{$value}</textarea>";

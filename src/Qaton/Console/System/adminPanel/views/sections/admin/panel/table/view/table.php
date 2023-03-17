@@ -5,6 +5,8 @@
         <tr>
             <th class="text-right" style="width: 10%;">
                 <?php echo $column ?>
+                <br>
+                <small><?php echo @$schema[$column]['type'] ?></small>
             </th>
             <td>
                 <?php if (isset($schema[$column]['type']) && $schema[$column]['type'] === 'foreign'): ?>
@@ -36,6 +38,7 @@
                                 echo $value;
                                 break;
                             case 'text':
+                            case 'html':
                                 echo "<textarea class='form-control editor_view_only' type='text' name='{$column}'>{$value}</textarea>";
                                 break;
                             case 'hashed':
