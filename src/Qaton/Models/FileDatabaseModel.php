@@ -145,6 +145,21 @@ class FileDatabaseModel
         return $this->db->get();
     }
 
+    public function nget()
+    {
+        return $this->db->nget();
+    }
+
+    public function orderDesc()
+    {
+        return $this->db->orderDesc();
+    }
+
+    public function orderBy($col, $order)
+    {
+        return $this->db->orderBy($col, $order);
+    }
+
     public function clone()
     {
         return $this->db->clone();

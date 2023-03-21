@@ -73,6 +73,7 @@ class FileDatabase
     public const SCHEMA_FILENAME    = 'schema' . self::JSON_EXT;
     public const LOG_FILENAME       = 'log' . self::LOG_EXT;
     public const SINDEX_FILENAME    = 'keys' . self::JSON_EXT;
+    public const NGET_TMP_FILENAME  = '/tmp/filedatabase_nget_';
 
     public const COL_ID             = 'id';
     public const COL_CREATED        = 'created_on';
@@ -152,10 +153,12 @@ class FileDatabase
                                     'NON_NUMERIC_COMPARISON' => 'where clause tryting to compare non numeric values',
                                     'REQUIRED_DATA_MISSING' => 'required column missing data, null not allowed',
                                     'UNIQUE_CONSTRAINT_VOLIATION' => 'violation of unique data constraint',
-                                    'UNABLE_TO_UPLOAD_FILE' => 'unable to upload file'
+                                    'UNABLE_TO_UPLOAD_FILE' => 'unable to upload file',
+                                    'SERIAL_INDEX_MISSING' => 'serial index is missing'
                                     ];
 
     public const DB_TIMESTAMP_FMT   = 'Y-m-d h:i:s';
+    //public const DB_READ_BUFFER_ROWS = 100;
 
     private $database_dir;
     private $database_schema_file;
@@ -179,6 +182,10 @@ class FileDatabase
     private $where_columns = array();
     private $where_operators = array();
     private $where_values = array();
+    private $get_rows = array();
+    private $serial_rows = array();
+    private $order_by = false;
+    private $order_desc = false;
     private $masked = true;
     private $verify_unhashed_columns = array();
     private $with_hashed = false;
@@ -186,6 +193,7 @@ class FileDatabase
     private $with_sym_files = false;
     private $with_real_files = false;
     private $with_files_meta = false;
+    private $with_deleted = false;
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -225,6 +233,7 @@ class FileDatabase
     public $http_get_file_ref_sym_basepath_key = 'basepath';
     public $http_get_file_ref_sym_baseurl_key = 'baseurl';
     public $http_get_file_ref_sym_basename_key = 'basename';
+    public $db_read_buffer_rows = 100;
 
     public function __construct()
     {
@@ -432,6 +441,288 @@ class FileDatabase
         }
     }
 
+    public function nget()
+    {
+        $this->_log(__METHOD__, [
+            'limit' => $this->limit,
+            'offset' => $this->offset,
+            'selects' => $this->selects,
+            'where_columns' => $this->where_columns,
+            'where_values' => $this->where_values,
+            'foreigners' => $this->foreigners,
+            'pivot_tables' => $this->pivot_tables,
+            'pivot_columns' => $this->pivot_columns,
+        ]);
+
+        /*
+            TODO: in the new meta format, individual index keys will no longer
+            be saved because it's redundant. For example, [1][2][3]..[999] is
+            the same as writing 999. Then a separate approach to handling
+            soft deleted and purged keys may be implemented separately and then
+            this can even be used to prune and defragement the DB from time to time
+            to improve perf. For example, if the range is 1-999 and 10 are purged,
+            then at some point (or even during purging) all the keys may be
+            updated and the index range updated to 1-989. This would however
+            change the ID values for specific ID refs so it should only be done
+            on data where the ID ref does not matter _OR_ ... the internal line
+            id should be independent from the uinque ID key. Perhaps the internal
+            line pointer should not be saved at all to save even more space and then
+            aling with jsonlines each line number may be the internal pointer index.
+            Needless to say, the new meta format would be far more efficient when
+            it's implemented.
+            /
+            For example, eliminating the meta index for the Bible would save 2.11 mb
+            of memory usage and improve speed significantly.
+            /
+            Also: the new format should separate col data into separate dirs instead of
+            a single json file and use a jsonlines index to hold limited data which
+            may be filtered or searched (requires some thinking)
+            /
+            Also: some col types such as bool, int, double, and new (word) should be
+            usable in where comparisons while others will switch to another algo which
+            will be slower and use a word index if text/html/md or something else for
+            files using meta (perhaps by size, format, etc)
+            /
+            Also cache results. By remembering changes to tables based on inserts,
+            and new values, queries can be cached maybe with cache() or maybe cache
+            by defuault and noCache() to disable... so if no changes, then cached
+            results will be returned plain (and maybe in a way that works well with
+            Qatan views too. After major updates/inserts, the cache could also be
+            pre-compiled/built so that it is ready at runtime... (think)
+            /
+            implment named/labled prepared queries so that they can easily be
+            identified for caching without having to calculate a unique name based
+            on clauses and query criteria. cacheKey('foo1') for example
+            /
+            Also look intp pack/unpack of arrays instead of json and gzip and other
+            for as well as file streaming for better efficieny
+        */
+        $this->meta = $this->_get_table_meta();
+
+        // TODO: implement with_deleted
+
+        // TODO: if meta is already in a mem cache, then performance + mem usage will improve significantly
+
+        // TODO: To prevent reading/looping large meta, see new format notes above for next version of FDB
+        // eliminate on broad scope first using
+        /* DISABLED because offset support
+        $read_buffer_size = 0;
+        foreach ($this->meta['index'] as $row_id => $row_is_alive) {
+            if ($this->with_deleted === false && $row_is_alive == 0) {
+                // discard deleted items
+                unset($this->meta['index'][$row_id]); // for better memory efficiency
+                continue;
+            }
+            //$this->get_rows[] = $row_id; // this will double memory usage even with &$row_id
+
+            // process where clauses first before filtering out anything else
+
+            $read_buffer_size++;
+            if ($read_buffer_size == $this->db_read_buffer_rows) {
+                $read_buffer_size = 0;
+            }
+        }
+        */
+
+        //_vd($this->meta);
+
+        // This conforms with the existing FDB format but is not efficeint as it's loading everything into memory each time (it should already be in memory or read one line at a time)
+        // process of elimination method // TODO: this will change on next version so entire thing does not needs to be read
+        $this->serial_rows = $this->_get_table_serial_rows_by_json_files();
+
+        $this->filter_get_where_scope();
+        $this->filter_get_constraints();
+
+        if ($this->order_desc === true && $this->order_by === false) {
+            return array_reverse($this->get_rows);
+        }
+
+        if ($this->order_by !== false) {
+            //$col_arr = array_column($this->get_rows, $this->order_by);
+            $col_arr = [];
+            foreach ($this->get_rows as $row) {
+                if (isset($row[$this->order_by])) {
+                    $col_arr[$row[$this->order_by]] = $row;
+                }
+            }
+            if ($this->order_desc === true) {
+                return array_reverse($col_arr);
+            }
+            return $col_arr;
+        }
+
+        return $this->get_rows;
+    }
+
+    private function filter_get_where_scope()
+    {
+        if (empty($this->where_columns)) {
+            return;
+        }
+
+        foreach ($this->serial_rows as $i => $id_json) {
+            if (!$this->_set_serial_row($i)) {
+                continue;
+            }
+            if (!file_exists($this->row_data_file)) {
+                unset($this->serial_rows[$i]);
+                unset($this->meta[self::META_INDEX][$i]);
+                continue;
+            }
+            $item = $this->_read_json_file($this->row_data_file);
+            if (!isset($item[self::COL_ID])) {
+                unset($this->serial_rows[$i]);
+                unset($this->meta[self::META_INDEX][$i]);
+                continue;
+            }
+            foreach ($this->where_columns as $index => $col) {
+                $keep = false;
+                if (array_key_exists($col, $item)) {
+                    switch ($this->where_operators[$index]) {
+                        case '=':
+                        case '==':
+                            if ($this->where_values[$index] == $item[$col]) {
+                                $keep = true;
+                            }
+                            break;
+
+                        case '!=':
+                            if ($this->where_values[$index] != $item[$col]) {
+                                $keep = true;
+                            }
+                            break;
+
+                        case '>':
+                            if (!is_numeric($this->where_values[$index]) || !is_numeric($item[$col])) {
+                                $this->_error_warn(self::ERRORS['NON_NUMERIC_COMPARISON'], [$this->where_values[$index], $item[$col]]);
+                            } else {
+                                if ($this->where_values[$index] < $item[$col]) {
+                                    $keep = true;
+                                }
+                            }
+                            break;
+
+                        case '<':
+                            if (!is_numeric($this->where_values[$index]) || !is_numeric($item[$col])) {
+                                $this->_error_warn(self::ERRORS['NON_NUMERIC_COMPARISON'], [$this->where_values[$index], $item[$col]]);
+                            } else {
+                                if ($this->where_values[$index] > $item[$col]) {
+                                    $keep = true;
+                                }
+                            }
+                            break;
+
+                        case '>=':
+                            if (!is_numeric($this->where_values[$index]) || !is_numeric($item[$col])) {
+                                $this->_error_warn(self::ERRORS['NON_NUMERIC_COMPARISON'], [$this->where_values[$index], $item[$col]]);
+                            } else {
+                                if ($this->where_values[$index] <= $item[$col]) {
+                                    $keep = true;
+                                }
+                            }
+                            break;
+
+                        case '<=':
+                            if (!is_numeric($this->where_values[$index]) || !is_numeric($item[$col])) {
+                                $this->_error_warn(
+                                    self::ERRORS['NON_NUMERIC_COMPARISON'],
+                                    [$this->where_values[$index],
+                                    $item[$col]]
+                                );
+                            } else {
+                                if ($this->where_values[$index] >= $item[$col]) {
+                                    $keep = true;
+                                }
+                            }
+                            break;
+
+                        case 'like':
+                            if (!empty(preg_grep('/^' . $this->where_values[$index] . '$/i', explode(' ', $item[$col])))) {
+                                $keep = true;
+                            }
+                            break;
+                    }
+
+                }
+                if ($keep === false) {
+                    unset($this->serial_rows[$i]);
+                    unset($this->meta[self::META_INDEX][$i]);
+                    continue;
+                }
+            }
+        }
+    }
+
+    public function orderDesc()
+    {
+        $this->order_desc = true;
+        return $this;
+    }
+
+    public function orderBy($col, $order)
+    {
+        if ($order == 'desc') {
+            $this->order_desc = true;
+        }
+        $this->order_by = $col;
+        return $this;
+    }
+
+    private function filter_get_constraints()
+    {
+        $first_key = array_key_first($this->serial_rows);
+        $last_key = array_key_last($this->serial_rows);
+        
+        // determine default 
+        if ($this->limit === false || $this->limit > $last_key || $this->limit < 1) {
+            $this->limit = $last_key;
+        }
+
+        if ($this->offset === false || $this->offset < 1) {
+            $this->offset = $first_key;
+        }
+
+        $result_rows = 0;
+        // TODO: in the new version, unique ids should be in some other optimized index so that all data does not need to be loaded to compare
+        for ($i = $this->offset; $i <= (($this->offset + $this->limit) - 1); $i++) {
+            if ($result_rows == $this->limit) {
+                break;
+            }
+            if (!isset($this->meta[self::META_INDEX][$i])) {
+                unset($this->serial_rows[$i]);
+                continue;
+            }
+            $row_status = $this->meta[self::META_INDEX][$i];
+            if ($this->with_deleted === false && (bool)$row_status === false) {
+                // discard deleted items
+                unset($this->serial_rows[$i]);
+                unset($this->meta[self::META_INDEX][$i]); // for better memory efficiency
+                continue;
+            }
+            if (!$this->_set_serial_row($i)) {
+                continue;
+            }
+            //$this->_set_row($i);
+            if (!file_exists($this->row_data_file)) {
+                unset($this->serial_rows[$i]);
+                unset($this->meta[self::META_INDEX][$i]);
+                continue;
+            }
+            $item = $this->_read_json_file($this->row_data_file);
+            if (!isset($item[self::COL_ID])) {
+                unset($this->serial_rows[$i]);
+                unset($this->meta[self::META_INDEX][$i]);
+                continue;
+            }
+            
+
+            $this->get_rows[$i] = $item;
+            $result_rows++;
+        }
+
+        return $this->get_rows;
+    }
+
     public function get()
     {
 
@@ -497,7 +788,17 @@ class FileDatabase
                     if (!empty($this->where_columns)) {
                         $where_filtered = array();
 
+                        ///*
+                        //_vd($this->where_columns);
+                        //_vd($this->where_operators);
+                        //_vd($this->where_values);
+                        //_vd($select_filtered);
+                        //*/
+
                         foreach ($this->where_columns as $index => $col) {
+                            //_vd("{$this->where_values[$index]} == {$select_filtered[$col]}");
+                            //_vd("{$index} == {$col}");
+                            //exit();
                             if (array_key_exists($col, $select_filtered)) {
                                 switch ($this->where_operators[$index]) {
                                     case '=':
@@ -569,6 +870,15 @@ class FileDatabase
                     } else {
                         $where_filtered = $select_filtered;
                     }
+
+                    /*
+                    _vd($this->where_columns);
+                    _vd($this->where_operators);
+                    _vd($this->where_values);
+
+                    _vd($where_filtered);
+                    exit();
+                    */
 
                     foreach ($this->table_schema as $col => $props) {
                         switch ($props[self::PROP_TYPE]) {
@@ -1304,6 +1614,28 @@ class FileDatabase
         }
     }
 
+    private function _get_table_serial_rows_by_json_files()
+    {
+        $rows = glob($this->table_dir . DIRECTORY_SEPARATOR . '[0-9]*' . self::JSON_EXT, GLOB_NOSORT);
+        natsort($rows);
+        $rows = array_values($rows);
+        return $rows;
+    }
+
+    private function _set_serial_row($row_index)
+    {
+        //echo "{$row_index}<br>";
+        if (isset($this->serial_rows[($row_index)])) {
+            $this->row_data_file = $this->serial_rows[($row_index)];
+            $row_path = pathinfo($this->row_data_file);
+            $this->row_data_dir = $row_path['dirname'];
+            return true;
+        } //else {
+        //    $this->_error_fatal(self::ERRORS['SERIAL_INDEX_MISSING'], $row_index);
+        //}
+        return false;
+    }
+
     private function _set_row(int $id)
     {
         $this->row_data_dir = $this->table_dir . DIRECTORY_SEPARATOR . $id . self::DATA_DIR_SUFFIX;
@@ -1503,6 +1835,8 @@ class FileDatabase
 
     private function _get_table_meta()
     {
+        // TODO: implement memory cache in next version
+
         $this->_log(__METHOD__, $this->meta_file);
         if (!isset($this->schema[self::SCHEMA_TABLES][$this->table])) {
             if ($this->auto_create_schema_tables === true) {
@@ -1511,7 +1845,6 @@ class FileDatabase
             } else {
                 $this->_error_fatal(self::ERRORS['TABLE_NOT_EXISTS'], $this->table);
             }
-            
         }
         if (!file_exists($this->meta_file)) {
             if ($this->auto_create_schema_tables === true) {
@@ -1531,6 +1864,8 @@ class FileDatabase
                 $this->_error_fatal(self::ERRORS['TABLE_META_MISSING'], $this->meta_file);
             }
         }
+
+        // TODO: test format if ['index'] exists and is valid plus other checks
         
         return $meta;
     }
@@ -1570,6 +1905,8 @@ class FileDatabase
 
     private function _set_schema()
     {
+        // TODO: implement memory cache in next version
+        
         $this->_log(__METHOD__, $this->database_schema_file);
         $this->schema = $this->_read_json_file($this->database_schema_file);
         $this->_log('SCHEMA', $this->schema);
