@@ -667,6 +667,10 @@ class FileDatabase
 
     private function filter_and_mutate_data(&$rows)
     {
+        if (empty($rows)) {
+            return false;
+        }
+        
         foreach ($rows as $row_index => $row) {
             $rows[$row_index] = $this->filter_select_cols($row);
         }
