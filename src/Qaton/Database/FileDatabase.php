@@ -196,7 +196,7 @@ class FileDatabase
     private $with_files_meta = false;
     private $with_deleted = false;
     private $is_cacheable = false;
-    private $clear_cache = true;
+    private $clear_cache = false;
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -599,6 +599,10 @@ class FileDatabase
 
     private function build_and_save_cache(&$rows, $skip_create = true)
     {
+        if ($this->is_cacheable === false) {
+            return false;
+        }
+        
         $sig = $this->_get_cache_sig();
         
         $db = new FileDatabase();
@@ -628,6 +632,11 @@ class FileDatabase
                 'data' => json_encode($rows)
             ]);
         } else {
+            /*
+            if ($this->clear_cache === true) {
+                $db->table(self::CACHE_TABLE)->drop();
+            }
+            */
             $rows = json_decode($data, JSON_OBJECT_AS_ARRAY);
         }
 
