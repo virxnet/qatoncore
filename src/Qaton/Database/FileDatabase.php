@@ -74,6 +74,7 @@ class FileDatabase
     public const LOG_FILENAME       = 'log' . self::LOG_EXT;
     public const SINDEX_FILENAME    = 'keys' . self::JSON_EXT;
     public const NGET_TMP_FILENAME  = '/tmp/filedatabase_nget_';
+    public const CACHE_TABLE        = 'filedatabase_cache';
 
     public const COL_ID             = 'id';
     public const COL_CREATED        = 'created_on';
@@ -194,6 +195,8 @@ class FileDatabase
     private $with_real_files = false;
     private $with_files_meta = false;
     private $with_deleted = false;
+    private $is_cacheable = false;
+    private $clear_cache = true;
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -281,7 +284,7 @@ class FileDatabase
         return $this;
     }
 
-    public function unmask() 
+    public function unmask()
     {
         $this->masked = false;
         return $this;
@@ -441,8 +444,24 @@ class FileDatabase
         }
     }
 
+    public function cache()
+    {
+        $this->is_cacheable = true;
+        return $this;
+    }
+
+    public function clearCache()
+    {
+        $this->clear_cache = true;
+        return $this;
+    }
+
     public function nget()
     {
+        if ($this->build_and_save_cache($this->get_rows)) {
+            return $this->get_rows;
+        }
+        
         $this->_log(__METHOD__, [
             'limit' => $this->limit,
             'offset' => $this->offset,
@@ -557,12 +576,92 @@ class FileDatabase
         return $this->get_rows;
     }
 
+    private function _get_cache_sig()
+    {
+        $wc = implode('_', $this->where_columns);
+        $wo = implode('_', $this->where_operators);
+        $wv = implode('_', $this->where_values);
+        $sl = implode('_', $this->selects);
+        $fr = implode('_', $this->foreigners);
+        $pc = implode('_', $this->pivot_columns);
+        $pt = implode('_', $this->pivot_tables);
+        $od = (int)$this->order_desc;
+        if (is_string($this->order_by)) {
+            $ob = $this->order_by;
+        } else {
+            $ob = (int)$this->order_by;
+        }
+        
+        $sig = urlencode("_{$this->table}_{$sl}_{$wc}_{$wo}_{$wv}_{$this->limit}_{$this->offset}_{$od}_{$ob}_{$fr}_{$pc}_{$pt}");
+
+        return $sig;
+    }
+
+    private function build_and_save_cache(&$rows, $skip_create = true)
+    {
+        $sig = $this->_get_cache_sig();
+        
+        $db = new FileDatabase();
+        $db->load($this->database_dir);
+        if (!$db->table_exists(self::CACHE_TABLE)) {
+            if ($skip_create === false) {
+                $db->table(self::CACHE_TABLE)->create([
+                    'sig' => [
+                        'type' => 'string',
+                        'null' => false,
+                        'default' => 'error'
+                    ],
+                    'data' => [
+                        'type' => 'text',
+                        'null' => true
+                    ]
+                ]);
+            } else {
+                return false;
+            }
+        }
+        
+        $data = $db->fastTextGet(self::CACHE_TABLE, 'data', 'sig', $sig);
+        if (is_null($data)) {
+            $db->table(self::CACHE_TABLE)->insert([
+                'sig' => $sig,
+                'data' => json_encode($rows)
+            ]);
+        } else {
+            $rows = json_decode($data, JSON_OBJECT_AS_ARRAY);
+        }
+
+        // $rows were passed by ref, so should be updated in memory
+
+        return true;
+    }
+
+    public function fastTextGet($table, $select_col, $where_col, $where_val)
+    {
+        $this->table($table);
+        $this->meta = $this->_get_table_meta();
+        if (!isset($this->meta['index'])) {
+            return null;
+        }
+        foreach ($this->meta['index'] as $row => $status) {
+            $this->_set_row($row);
+            $data = $this->_read_json_file($this->table_dir . DIRECTORY_SEPARATOR . $row . self::JSON_EXT);
+            if (isset($data[$where_col]) && $data[$where_col] == $where_val) {
+                if (isset($data[$select_col])) {
+                    return $this->_read_file($this->row_data_dir
+                    . DIRECTORY_SEPARATOR . $select_col . self::TEXT_EXT);
+                }
+            }
+        }
+        return null;
+    }
+
     private function filter_and_mutate_data(&$rows)
     {
         foreach ($rows as $row_index => $row) {
             $rows[$row_index] = $this->filter_select_cols($row);
         }
-        
+
         foreach ($rows as $row_index => $row) {
             
             $this->_set_row($row[self::COL_ID]);
@@ -653,6 +752,8 @@ class FileDatabase
             // Test if passing entire $rows insread of pass by ref is better since it's an array value
             $this->populate_foreign_data($row);
         }
+
+        $this->build_and_save_cache($rows, false);
     }
 
     private function filter_select_cols(&$row)
