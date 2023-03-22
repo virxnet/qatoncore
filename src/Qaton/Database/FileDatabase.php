@@ -534,6 +534,7 @@ class FileDatabase
         $this->filter_get_constraints();
 
         if ($this->order_desc === true && $this->order_by === false) {
+            $this->populate_rich_data($this->get_rows);
             return array_reverse($this->get_rows);
         }
 
@@ -545,13 +546,144 @@ class FileDatabase
                     $col_arr[$row[$this->order_by]] = $row;
                 }
             }
+            $this->populate_rich_data($col_arr);
             if ($this->order_desc === true) {
                 return array_reverse($col_arr);
             }
             return $col_arr;
         }
 
+        $this->populate_rich_data($this->get_rows);
         return $this->get_rows;
+    }
+
+    private function populate_rich_data(&$rows)
+    {
+        foreach ($rows as $row_index => $row) {
+            $this->_set_row($row['id']);
+            foreach ($this->table_schema as $col => $props) {
+                switch ($props[self::PROP_TYPE]) {
+                    case self::TYPE_TEXT:
+                    case self::TYPE_HTML:
+                    case self::TYPE_MD:
+                        if (isset($rows[$row_index][$col])) {
+                            $rows[$row_index][$col] = $this->_read_file($this->row_data_dir
+                                                            . DIRECTORY_SEPARATOR . $col . self::TEXT_EXT);
+                        }
+                        break;
+    
+                    case self::TYPE_TIMESTAMP:
+                        if (isset($rows[$row_index][$col])) {
+                            if (is_null($rows[$row_index][$col])) {
+                                $where_filtered[$col . self::SUFFIX_HUMAN] = null;
+                            } else {
+                                if ($this->human_friendly === true) {
+                                    $where_filtered[$col . self::SUFFIX_HUMAN] = date(
+                                        self::DB_TIMESTAMP_FMT,
+                                        $rows[$row_index][$col]
+                                    );
+                                }
+                            }
+                        }
+                        break;
+    
+                    case self::TYPE_FOREIGN:
+                        if (isset($rows[$row_index][$col])) {
+                            if (in_array($col, $this->foreigners)) {
+                                $db = new FileDatabase();
+                                $db->load($this->database_dir);
+                                $rows = $db->table(
+                                    $this->table_schema[$col][self::PROP_FOREIGN]
+                                )->where(
+                                    $this->table_schema[$col][self::PROP_KEY],
+                                    $rows[$row_index][$col]
+                                )->get();
+                                if (isset($rows[0])) {
+                                    $rows[$row_index][$col] = $rows[0];
+                                } else {
+                                    $rows[$row_index][$col] = [];
+                                }
+                            }
+                        }
+                        break;
+    
+                    case self::TYPE_MASKED:
+                        if (isset($rows[$row_index][$col]) && $this->masked === true) {
+                            $rows[$row_index][$col] = self::MASKED_VAL;
+                        }
+                        break;
+    
+                    case self::TYPE_HASHED:
+                        if (isset($rows[$row_index][$col])) {
+                            if (isset($this->verify_unhashed_columns[$col])) {
+                                $rows[$row_index][$col] = $this->verifyEncodedHash(
+                                    $this->verify_unhashed_columns[$col],
+                                    $rows[$row_index][$col]
+                                );
+                            } else {
+                                if ($this->with_hashed === false) {
+                                    $rows[$row_index][$col] = null;
+                                }
+                            }
+                        }
+                        break;
+    
+                    case self::TYPE_FILE:
+                        if (
+                            isset($rows[$row_index][$col])
+                            && ( $this->with_query_files === true
+                                || $this->with_sym_files !== false
+                                || $this->with_real_files === true
+                                || $this->with_files_meta === true
+                            )
+                        ) {
+                            $rows[$row_index][$col] = $this->_get_uploaded_file_ref($this->table, $col, $serial_index[$i]);
+                        } elseif (isset($rows[$row_index][$col])) {
+                            $where_filtered[$col] = self::FILE_MASK;
+                        }
+                        break;
+                }
+            }
+
+            $this->populate_foreign_data($row);
+        }
+    }
+
+
+    private function populate_foreign_data(&$row)
+    {
+        if (!empty($this->pivot_tables)) {
+            if (isset($row[self::COL_ID]) && is_integer($row[self::COL_ID])) {
+                foreach ($this->pivot_tables as $index => $pivot_table) {
+                    $pivot_schema = &$this->schema[self::SCHEMA_TABLES][$pivot_table];
+                    foreach ($pivot_schema as $pivot_col => $col_props) {
+                        if (isset($col_props[self::PROP_TYPE]) && $col_props[self::PROP_TYPE] == self::TYPE_FOREIGN) {
+                            if (isset($col_props[self::PROP_FOREIGN]) && $col_props[self::PROP_FOREIGN] == $this->table && isset($col_props[self::PROP_KEY])) {
+                                $primary_col = $pivot_col;
+                                $db = new FileDatabase($this->database_dir);
+                                $db->load($this->database_dir);
+                                $pivot_res = $db->table($pivot_table)
+                                                ->where($primary_col, $row[$col_props[self::PROP_KEY]])
+                                                ->get();
+                                foreach ($pivot_res as $sub_res)
+                                {
+                                    if (isset($pivot_schema[$this->pivot_columns[$index]])) {
+                                        if (isset($pivot_schema[$this->pivot_columns[$index]][self::PROP_FOREIGN]) && $pivot_schema[$this->pivot_columns[$index]][self::PROP_KEY]) {
+                                            $db = new FileDatabase($this->database_dir);
+                                            $db->load($this->database_dir);
+                                            $child = $db->table($pivot_schema[$this->pivot_columns[$index]][self::PROP_FOREIGN])
+                                                        ->where($pivot_schema[$this->pivot_columns[$index]][self::PROP_KEY], $sub_res[$this->pivot_columns[$index]])
+                                                        ->get();
+                                            $row[$pivot_schema[$this->pivot_columns[$index]][self::PROP_FOREIGN]][] = $child[0];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private function filter_get_where_scope()
