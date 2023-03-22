@@ -672,7 +672,9 @@ class FileDatabase
         }
 
         foreach ($rows as $row_index => $row) {
-            
+            if (isset($row[self::COL_ID])) {
+                continue;
+            }
             $this->_set_row($row[self::COL_ID]);
             foreach ($this->table_schema as $col => $props) {
                 switch ($props[self::PROP_TYPE]) {
