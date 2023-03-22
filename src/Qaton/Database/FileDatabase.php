@@ -676,7 +676,7 @@ class FileDatabase
         }
 
         foreach ($rows as $row_index => $row) {
-            if (!isset($row[self::COL_ID]) || (isset($row[self::COL_ID]) && $row[self::COL_ID] !== null)) {
+            if (!isset($row[self::COL_ID]) || (isset($row[self::COL_ID]) && $row[self::COL_ID] === null)) {
                 continue;
             }
             $this->_set_row($row[self::COL_ID]);
