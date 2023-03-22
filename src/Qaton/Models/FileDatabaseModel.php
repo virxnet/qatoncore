@@ -145,6 +145,21 @@ class FileDatabaseModel
         return $this->db->get();
     }
 
+    public function cache()
+    {
+        return $this->db->cache();
+    }
+
+    public function clearCache()
+    {
+        return $this->db->clearCache();
+    }
+
+    public function fastTextGet($table, $select_col, $where_col, $where_val)
+    {
+        return $this->db->fastTextGet($table, $select_col, $where_col, $where_val);
+    }
+
     public function nget()
     {
         return $this->db->nget();
