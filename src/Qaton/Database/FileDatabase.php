@@ -534,7 +534,7 @@ class FileDatabase
         $this->filter_get_constraints();
 
         if ($this->order_desc === true && $this->order_by === false) {
-            $this->populate_rich_data($this->get_rows);
+            $this->filter_and_mutate_data($this->get_rows);
             return array_reverse($this->get_rows);
         }
 
@@ -546,21 +546,26 @@ class FileDatabase
                     $col_arr[$row[$this->order_by]] = $row;
                 }
             }
-            $this->populate_rich_data($col_arr);
+            $this->filter_and_mutate_data($col_arr);
             if ($this->order_desc === true) {
                 return array_reverse($col_arr);
             }
             return $col_arr;
         }
 
-        $this->populate_rich_data($this->get_rows);
+        $this->filter_and_mutate_data($this->get_rows);
         return $this->get_rows;
     }
 
-    private function populate_rich_data(&$rows)
+    private function filter_and_mutate_data(&$rows)
     {
         foreach ($rows as $row_index => $row) {
-            $this->_set_row($row['id']);
+            $rows[$row_index] = $this->filter_select_cols($row);
+        }
+        
+        foreach ($rows as $row_index => $row) {
+            
+            $this->_set_row($row[self::COL_ID]);
             foreach ($this->table_schema as $col => $props) {
                 switch ($props[self::PROP_TYPE]) {
                     case self::TYPE_TEXT:
@@ -637,7 +642,7 @@ class FileDatabase
                                 || $this->with_files_meta === true
                             )
                         ) {
-                            $rows[$row_index][$col] = $this->_get_uploaded_file_ref($this->table, $col, $serial_index[$i]);
+                            $rows[$row_index][$col] = $this->_get_uploaded_file_ref($this->table, $col, $row[self::COL_ID]);
                         } elseif (isset($rows[$row_index][$col])) {
                             $where_filtered[$col] = self::FILE_MASK;
                         }
@@ -645,10 +650,20 @@ class FileDatabase
                 }
             }
 
+            // Test if passing entire $rows insread of pass by ref is better since it's an array value
             $this->populate_foreign_data($row);
         }
     }
 
+    private function filter_select_cols(&$row)
+    {
+        foreach ($row as $col => &$val) {
+            if (!in_array($col, $this->selects)) {
+                unset($row[$col]);
+            }
+        }
+        return $row;
+    }
 
     private function populate_foreign_data(&$row)
     {
