@@ -197,6 +197,7 @@ class FileDatabase
     private $with_deleted = false;
     private $is_cacheable = false;
     private $clear_cache = false;
+    private $query_signature = '';
     private $result = array();
     private $log = array();
     private $errors = array();
@@ -252,6 +253,8 @@ class FileDatabase
 
     public function select(string $column)
     {
+        $this->_update_query_signature('S', $column);
+
         if (is_null($column)) {
             return $this;
         }
@@ -265,6 +268,8 @@ class FileDatabase
 
     public function offset(int $offset = 1)
     {
+        $this->_update_query_signature('OF', $offset);
+        
         $this->_log(__METHOD__, $offset);
         $this->offset = $offset;
         return $this;
@@ -272,6 +277,8 @@ class FileDatabase
 
     public function limit(int $limit = 0)
     {
+        $this->_update_query_signature('L', $limit);
+
         $this->_log(__METHOD__, $limit);
         $this->limit = $limit;
         return $this;
@@ -304,6 +311,12 @@ class FileDatabase
 
     public function where(string $column, $value_or_operator, $value_with_operator = false)
     {
+        if ($value_with_operator === false) {
+            $this->_update_query_signature('W', $column . $value_or_operator);
+        } else {
+            $this->_update_query_signature('W', $column . $value_or_operator . $value_with_operator);
+        }
+        
         if (is_null($column)) {
             return $this;
         }
@@ -603,7 +616,8 @@ class FileDatabase
             return false;
         }
         
-        $sig = $this->_get_cache_sig();
+        //$sig = $this->_get_cache_sig();
+        $sig = &$this->query_signature;
         
         $db = new FileDatabase();
         $db->load($this->database_dir);
@@ -918,12 +932,16 @@ class FileDatabase
 
     public function orderDesc()
     {
+        $this->_update_query_signature('OD', 'true');
+        
         $this->order_desc = true;
         return $this;
     }
 
     public function orderBy($col, $order)
     {
+        $this->_update_query_signature('OB', $col . (string)$order);
+
         if ($order == 'desc') {
             $this->order_desc = true;
         }
@@ -1839,6 +1857,8 @@ class FileDatabase
 
     public function table(string $table)
     {
+        $this->_update_query_signature('T', $table);
+
         $this->_log(__METHOD__, $table);
         $this->result = array();
         $this->table = $table;
@@ -1857,6 +1877,12 @@ class FileDatabase
     public function errors()
     {
         return $this->errors;
+    }
+
+    private function _update_query_signature(string $key, $value)
+    {
+        $value = (string)$value;
+        $this->query_signature .= ":{$key}.{$value}";
     }
 
     private function _set_search_index_dir($column_name)
